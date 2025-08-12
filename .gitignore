@@ -5,4 +5,8 @@ node_modules
 .DS_Store
 *.pyc
 *.egg-info
+./service/data
+./service/data/data
+client/build
+client/scripts
 service/data
