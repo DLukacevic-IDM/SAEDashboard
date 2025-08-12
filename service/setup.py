@@ -43,21 +43,23 @@ setup(
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        'marshmallow==2.21.0',
-        'psycopg2==2.9.5',
+        'marshmallow-sqlalchemy~=1.4.1',
+        'marshmallow>=3.26.1',
+        'psycopg2-binary>=2.9.5',
         'fastapi~=0.103.1',
         'uvicorn~=0.23.2',
         'requests~=2.28.2',
         'numpy~=1.24.1',
         'pandas~=1.5.3',
-        'packaging~=23.0'
+        'packaging~=23.0',
+        'PyYAML~=6.0.2'
     ],
 
     extras_require={
         'documentation': ['sphinx_rtd_theme', 'sphinx'],
         'dev': ['check-manifest', 'nose'],
         'test': ['coverage'],
-        'production': ['uwsgi']
+        'production': []
     },
     project_urls={
         'Bug Reports': 'https://github.com/InstituteforDiseaseModeling/service/issues',

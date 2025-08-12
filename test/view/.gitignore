@@ -1,6 +1,0 @@
-.idea
-result
-venv
-/node_modules
-.DS_Store
-*/__pycache__

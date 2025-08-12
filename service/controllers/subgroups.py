@@ -2,35 +2,24 @@ from service.helpers.controller_helpers import get_subgroups, read_dot_names, Co
     read_admin_level, read_use_descendant_dot_names
 from service.helpers.dot_name import DotName
 from service.schemas.SubgroupsSchema import SubgroupsListSchema
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
+import os
 
+import yaml
 router = APIRouter()
-
-LABELS = {
-    "all": "All Women",
-    "25plus_rural": "Women 25+, Rural",
-    "25plus_urban": "Women 25+, Urban",
-    "15-24_urban": "Women 15-24, Urban",
-    "15-24_rural": "Women 15-24, Rural",
-    "15-24": "Women 15-24",
-    "25plus": "Women 25+",
-    "15-24_Parity-0": "Women 15-24, Parity 0",
-    "15-24_Parity-1plus": "Women 15-24, Parity 1+",
-    "25plus_Parity-0": "Women 25+, Parity 0",
-    "25plus_Parity-1": "Women 25+, Parity 1",
-    "25plus_Parity-1plus": "Women 25+, Parity 1+",
-    "Parity-0": "Parity 0",
-    "Parity-1plus": "Parity 1+",
-    'all-1': 'All-1',
-    'all-NA': 'All-NA',
-    'rural': 'Rural',
-    'urban': 'Urban'
-}
-
 
 def generate_label(subgroup):
     # if we have a specific display name known, use it
-    label = LABELS.get(subgroup, None)
+
+    # Load the YAML file
+    full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../config.yaml')
+    with open(full_path, "r") as file:
+        config = yaml.safe_load(file)
+
+    # Retrieve the list of indicator_labels
+    subgroup_labels = config.get("subgroup_labels", {})
+
+    label = subgroup_labels.get(subgroup, None)
     if label is None:
         # generate a display name according to a standard set of rules
         label = " ".join(p.capitalize() for p in subgroup.split('_'))
@@ -40,15 +29,57 @@ def generate_label(subgroup):
 @router.get("/subgroups", response_model=SubgroupsListSchema)
 async def get_subgroups_by_dotname(request: Request):
     """
-    Example:    / subgroups?dot_name = Africa:Benin: Borgou
+    Retrieve available population subgroups for a specified region.
+
+    This endpoint returns a list of subgroups (e.g., age bands)
+    applicable to the specified region (`dot_name`). Each subgroup is returned as an `id` and a
+    human-readable `text` label. Optional filters include administrative level and whether to
+    include descendant regions in the subgroup query.
+
+    Subgroups are used to disaggregate indicator data in subsequent analytical requests.
+
+    Query Parameters:
+        - dot_name (str): The dot-separated name of the region (e.g., "Africa:Benin:Borgou").
+                          Only one value is allowed per request.
+        - use_descendant_dot_names (bool, optional): If True, search across descendant regions
+                                                     of the specified `dot_name`.
+        - admin_level (int, optional): Administrative level at which to evaluate subgroups
+                                       (e.g., 2 = admin1, 3 = admin3).
+
+    Returns:
+        dict: A dictionary containing a `"subgroups"` key that maps to a list of subgroup
+              entries, each with an `id` and `text` field.
+
+    Example 1: /subgroups?dot_name=Africa:Benin:Borgou
     return:
-    {
-        'subgroups': [
-            {"id": '15-24_urban', "text": "Women 15-24, Urban"},
-            {"id": '25plus_urban', "text": "Women 25+, Urban"},
-            ...
-        ]
-    }
+        {
+            'subgroups': [
+                {
+                    "id": '15-24_urban',
+                    "text": "Women 15-24, Urban"
+                },
+                {
+                    "id": '25plus_urban',
+                    "text": "Women 25+, Urban"},
+                ...
+            ]
+        }
+
+    Example 2:  /subgroups?dot_name=Africa:Senegal&use_descendant_dot_names=True&admin_level=3
+    return:
+        {
+            "subgroups": [
+                {
+                    "id": "all",
+                    "text": "All"
+                },
+                {
+                    "id": "outbreaks",
+                    "text": "Outbreaks"
+                },
+                ...
+            ]
+        }
     """
     try:
         # handle get arguments
@@ -71,4 +102,8 @@ async def get_subgroups_by_dotname(request: Request):
         return {"subgroups": subgroups_response}
 
     except ControllerException as e:
-        return str(e), 400
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise  # re-raise deliberate FastAPI exceptions
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -1,5 +1,0 @@
-
-resources:
-  - namespace.yaml
-  - sealed-secret.yaml
-  - job.yaml

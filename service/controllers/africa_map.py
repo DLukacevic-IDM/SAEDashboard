@@ -3,12 +3,30 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
+'''
+**Note: Will return 404 if Africa.shp.pickle does not exist in service/data/shapefiles
+'''
 
 @router.get("/africa_map/")
 async def get_africa_map():
         """
+        Retrieve pre-generated GeoJSON shape data for the African continent.
+
+        This endpoint returns a dictionary containing a single GeoJSON FeatureCollection
+        for administrative regions within Africa. The data is pre-processed and cached
+        in a pickle file to improve API performance and avoid re-parsing shapefiles.
+
+        The GeoJSON structure includes:
+        - FeatureCollection wrapper
+        - Multiple Feature objects, each with:
+        - id: Hierarchical region identifier (e.g., "Africa:Angola:Bié")
+        - properties: Region metadata (e.g., country, name, type)
+        - geometry: Polygon coordinates for rendering on a map
+
+        Returns:
+        dict: A dictionary with a single key ("Africa") containing the full GeoJSON FeatureCollection.
+
         Example: /dot_names?dot_name=Africa
-        return:
             {
                 "Africa": {
                     "type": "FeatureCollection",
@@ -39,7 +57,6 @@ async def get_africa_map():
                     ]
                 }
             }
-        :return: return the pre-generated africa shapes to improve performance
         """
         geojson = load_geojson_pickle("Africa.shp.pickle")
         return geojson
