@@ -40,7 +40,7 @@ def process_csv(input_path, output_path):
 
             # Build new column list based on available columns
             new_columns = []
-            for col in ['state', indicator1, indicator2, 'month', 'year', 'country', 'pred', 'pred_upper', 'pred_lower']:
+            for col in ['state', indicator1, indicator2, 'month', 'year', 'pred', 'pred_upper', 'pred_lower']:
                 if col and col in df.columns:
                     new_columns.append(col)
 

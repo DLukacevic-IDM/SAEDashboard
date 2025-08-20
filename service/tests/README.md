@@ -1,6 +1,6 @@
-# SenegalMEG API Test Suite
+# SAE Dashboard API Test Suite
 
-This folder contains the unit and integration tests for the FastAPI-based SenegalMEG API.
+This folder contains the unit and integration tests for the FastAPI-based SAE Dashboard API.
 
 ## Setup
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install the required packages before running the tests:
@@ -12,7 +12,7 @@ pip install -r requirements_test.txt
 Make sure the FastAPI app in `service/` can be imported. Be sure to run tests from the project root!
 
 
-## Usage
+## Usage    
 To run all tests:
 ```bash
 pytest 

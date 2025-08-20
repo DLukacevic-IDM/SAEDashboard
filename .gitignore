@@ -8,3 +8,4 @@ node_modules
 client/build
 client/scripts
 .vscode
+.env

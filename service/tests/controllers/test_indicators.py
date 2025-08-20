@@ -4,17 +4,14 @@ from tests.conftest import client
 
 
 # Mocked dependencies
-MOCK_DOT_NAME = "Africa:Senegal:Diourbel:Mbacke"
+MOCK_DOT_NAME = "Africa:Senegal:Dakar"
 MOCK_SUBGROUPS = ["all"]
 MOCK_VERSION = "1"
 MOCK_DATA_TIME = "2022"
-EXPECTED_INDICATOR_IDS = {
-    "CDM", "CDM_Coverage", "IPTp3", "MILDA", "MILDA_Coverage", "correct_treatment",
-    "incidence", "intervention_mix_pecadom",
-    "malaria_death", "malaria_death_per_100000", "neg_covars", "neg_covars_category",
-    "pos_covars", "pos_covars_category", "predicted_incidence", "reported_incidence",
-    "testing_rates", "tpr"
-}
+EXPECTED_INDICATOR_IDS = {'modern_method', 'traditional_method', 'unmet_need'}
+
+# modern_method, traditional_method
+# version 1
 
 
 @pytest.fixture
