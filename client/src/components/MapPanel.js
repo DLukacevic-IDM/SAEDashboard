@@ -1,17 +1,22 @@
-import React, {useEffect, useState} from 'react';
+/* eslint-disable max-len */
+import React, {useEffect} from 'react';
 import Paper from '@mui/material/Paper';
 import withStyles from '@mui/styles/withStyles';
 import {useDispatch, useSelector} from 'react-redux';
 import {
-  changeSelectedIndicator,
-  changeSelectedMapTheme,
+  changeSelectedIndicator, changeSelectedComparisonIndicator,
+  changeSelectedMapTheme, changeSelectedComparisonMapTheme,
+  changeSelectedState, changeSelectedComparisonState,
+  changeIsAdm3,
   changeSelectedSubgroup,
-  changeSelectedState,
+  changeSelectedComparisonSubgroup,
 } from '../redux/actions/filters';
 import Filters from './MapPanelFilter';
 import MapPanelMap from './MapPanelMap';
 import * as _ from 'lodash';
 import PropTypes from 'prop-types';
+import {FormattedMessage} from 'react-intl';
+
 
 const styles = {
   root: {
@@ -27,81 +32,107 @@ const styles = {
 const MapPanel = (props) => {
   const {classes, primary} = props;
   const dispatch = useDispatch();
-  const subgroups = useSelector((state) => state.filters.mapSubgroups);
   const indicators = useSelector((state) => state.filters.indicators);
-
-  const selectedIndicatorRedux = useSelector((state) => state.filters.selectedIndicator);
-  const selectedSubgroupRedux = useSelector((state) => state.filters.selectedSubgroup);
+  const selectedIndicator = useSelector((state) => state.filters.selectedIndicator);
+  const selectedSubgroup = useSelector((state) => state.filters.selectedSubgroup);
+  const selectedComparisonIndicator = useSelector(
+      (state) => state.filters.selectedComparisonIndicator);
+  const selectedSubgroupComparison = useSelector((state) => state.filters.selectedComparisonSubgroup);
+  const subgroups = _.find(indicators, {id: selectedIndicator})?.subgroups || [];
+  const subgroupsComparison = _.find(indicators, {id: selectedComparisonIndicator})?.subgroups || [];
   const selectedMapThemeRedux = useSelector((state) => state.filters.selectedMapTheme);
-  const selectedYearMonth = useSelector((state) => state.filters.selectedYearMonth);
+  const selectedComparisonMapThemeRedux = useSelector((state) =>
+    state.filters.selectedComparisonMapTheme);
+
+  const selectedYear = useSelector((state) => state.filters.selectedYear);
   const currentYear = useSelector((state) => state.filters.currentYear);
   const isAdm3 = useSelector((state) => state.filters.isAdm3);
 
-  const [selectedSubgroup, changeSubgroup] = useState();
-  const [selectedIndicator, changeIndicator] = useState();
+  // Handle changing indicator for main map.
+  const changeSelectedIndicatorHandler = (indicator) => {
+    dispatch(changeSelectedIndicator(indicator));
+  };
+
+  const changeIsAdm3Handler = (isAdm3) => {
+    dispatch(changeIsAdm3(isAdm3));
+  };
 
   // Handle changing indicator for main map.
-  const changeSelectedIndicatorRedux = (indicator) => {
-    dispatch(changeSelectedIndicator(indicator, props.primary));
+  const changeSelectedComparisonIndicatorHandler = (indicator) => {
+    dispatch(changeSelectedComparisonIndicator(indicator));
   };
 
-  // Handle changing subgroup for main map.
-  const changeSelectedSubgroupRedux = (subgroup) => {
-    dispatch(changeSelectedSubgroup(subgroup, props.primary));
-  };
-
-  // Handle changing the map theme color.
+  // Handle changing the map theme color for primary map.
   const changeSelectedMapThemeRedux = (mapTheme) => {
     dispatch(changeSelectedMapTheme(mapTheme));
   };
 
+  // Handle changing the map theme color for comparison map.
+  const changeSelectedComparisonMapThemeRedux = (mapTheme) => {
+    dispatch(changeSelectedComparisonMapTheme(mapTheme));
+  };
+
   // Handle changing the selected state.
   const setSelectedState = (state) => {
+    // if (selectedIndicator == selectedComparisonIndicator) {
+    // if same indicator is selected on both map, user is allowed
+    // see different time series plot on 2 different locations
     if (primary) {
       dispatch(changeSelectedState(state));
+    } else {
+      dispatch(changeSelectedComparisonState(state));
+    }
+    // } else {
+    //   dispatch(changeSelectedState(state));
+    //   dispatch(changeSelectedComparisonState(state));
+    // }
+  };
+
+  // By default assign the first element
+  if (subgroups.length !== 0 && !subgroups.includes(selectedSubgroup)) {
+    dispatch(changeSelectedSubgroup(primary && subgroups.includes('all') ? 'all' : subgroups[0]));
+  }
+  if (subgroupsComparison.length !== 0 && !subgroupsComparison.includes(selectedSubgroupComparison)) {
+    dispatch(changeSelectedComparisonSubgroup(!primary && subgroupsComparison.includes('all') ? 'all' : subgroupsComparison[0]));
+  }
+
+  useEffect(()=>{
+    dispatch(changeSelectedSubgroup(null));
+    dispatch(changeSelectedComparisonSubgroup(null));
+  }, [indicators.length, selectedIndicator, isAdm3]);
+
+  const changeSubgroup = (primary, subgroup) => {
+    if (primary) {
+      dispatch(changeSelectedSubgroup(subgroup));
+    } else {
+      dispatch(changeSelectedComparisonSubgroup(subgroup));
     }
   };
 
-  if (indicators.length !== 0 && !selectedIndicator) {
-    changeIndicator(indicators[0].id);
-  }
-
-  // By default assign the first element
-  if (subgroups.length !== 0 && !_.find(subgroups, {id: selectedSubgroup})) {
-    // try to find the next indicator/subgroup when there is only "All women" subgroup
-    if (subgroups[0].id === 'all' && indicators.length > 1 && !primary) {
-      changeIndicator(indicators[1].id);
-    }
-    const allSubgroup = _.find(subgroups, {id: 'all'});
-
-    changeSubgroup(primary && allSubgroup ? 'all' : subgroups[0].id);
-  }
-
-  useEffect(()=>{
-    changeSubgroup(null);
-  }, [indicators.length]);
-
-  useEffect(()=>{
-    changeSubgroup(null);
-    changeIndicator(null);
-  }, [isAdm3]);
 
   return (
     <Paper className={classes.root}>
-      <Filters title={primary ? 'Main Map' : 'Comparison Map'}
-        changeSubgroup={primary ? changeSelectedSubgroupRedux: changeSubgroup}
-        changeIndicator={primary ? changeSelectedIndicatorRedux : changeIndicator}
+      <Filters
+        title={primary ?
+          <FormattedMessage id='main_map' /> : <FormattedMessage id='comparison_map' />}
+        changeSubgroup={changeSubgroup}
+        changeIndicator={primary ? changeSelectedIndicatorHandler :
+          changeSelectedComparisonIndicatorHandler}
+        changeIsAdm3={changeIsAdm3Handler}
         changeMapTheme={changeSelectedMapThemeRedux}
-        selectedSubgroup={primary ? selectedSubgroupRedux : selectedSubgroup}
-        selectedIndicator={primary ? selectedIndicatorRedux : selectedIndicator}
+        changeComparisonMapTheme={changeSelectedComparisonMapThemeRedux}
+        selectedSubgroup={primary ? selectedSubgroup : selectedSubgroupComparison}
+        selectedIndicator={primary ? selectedIndicator : selectedComparisonIndicator}
         selectedMapTheme={selectedMapThemeRedux}
+        selectedComparisonMapTheme={selectedComparisonMapThemeRedux}
         parentClasses={primary ? {} : classes}
-        primary={primary}/>
+        primary={primary} />
       <MapPanelMap changeSelectedState={setSelectedState}
-        subgroup={primary ? selectedIndicatorRedux : selectedSubgroup}
-        indicator={primary ? selectedIndicatorRedux : selectedIndicator}
-        key={selectedIndicator + selectedIndicatorRedux + selectedSubgroup +
-          selectedSubgroupRedux + (primary ? currentYear : selectedYearMonth)}
+        subgroup={primary ? selectedSubgroup: selectedSubgroupComparison}
+        indicator={primary ? selectedIndicator: selectedComparisonIndicator}
+        key={selectedIndicator+selectedComparisonIndicator+selectedSubgroup+
+          + selectedSubgroupComparison+
+          primary ? currentYear : selectedYear}
         primary={primary}/>
     </Paper>
   );

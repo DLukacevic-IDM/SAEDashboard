@@ -1,0 +1,69 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+import withStyles from '@mui/styles/withStyles';
+
+const styles = {
+  exportButton: {
+    position: 'absolute',
+    top: 65,
+    right: 10,
+    zIndex: 1000,
+    backgroundColor: '#fff',
+    border: '1px solid #ccc',
+    borderRadius: 4,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+    padding: 4,
+  },
+};
+
+/**
+ * component for the PNLP map legend.
+ * @param {*} props
+ * @return {*} PNLP map legend component
+ */
+const DownloadImage = (props) => {
+  const {classes, legend, id, unitLabel, yLabel} = props;
+  const node = chart.current;
+    if (!node) return;
+
+    if (iconButtonRef.current) iconButtonRef.current.style.display = 'none';
+
+    htmlToImage.toPng(node)
+        .then((dataUrl) => {
+          const link = document.createElement('a');
+          link.download = 'map.png';
+          link.href = dataUrl;
+          link.click();
+        })
+        .catch((error) => console.error('Export map error:', error))
+        .finally(() => {
+          if (iconButtonRef.current) iconButtonRef.current.style.display = '';
+        });
+
+  return (
+    <div ref={chart} className={classes.MapContainer} id="chartContainer">
+          <Tooltip title="Image Export">
+            <IconButton
+              ref={iconButtonRef}
+              className={classes.exportButton}
+              onClick={exportMap}
+              size="small"
+            >
+              <DownloadIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </div>
+  )
+
+};
+
+
+DownloadImage.propTypes = {
+  classes: PropTypes.object,
+  legend: PropTypes.object.isRequired,
+  id: PropTypes.string.isRequired,
+  unitLabel: PropTypes.func.isRequired,
+  yLabel: PropTypes.string.isRequired,
+};
+
+export default withStyles(styles)(DownloadImage);

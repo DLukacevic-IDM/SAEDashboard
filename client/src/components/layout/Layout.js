@@ -1,16 +1,23 @@
 import React, {useState} from 'react';
 import {useSelector, useDispatch} from 'react-redux';
-import {AppBar, IconButton, Menu, MenuItem, Toolbar, Typography, Snackbar} from '@mui/material';
+import {
+  AppBar, IconButton, Menu, MenuItem, Toolbar, Typography,
+  Snackbar, Select,
+} from '@mui/material';
 import withStyles from '@mui/styles/withStyles';
 import MenuIcon from '@mui/icons-material/Menu';
 import Footer from './Footer';
 import Dashboard from '../../views/Dashboard';
 import About from '../../views/About';
+import Welcome from '../../views/Welcome';
+import Instructions from '../../views/Instructions';
 import Libraries from '../../views/Libraries';
 import SnackbarContentWrapper from '../uielements/SnackBarContentWrapper';
 import {showStop} from '../../redux/actions/messaging';
-import config from '../../app_config.json';
 import PropTypes from 'prop-types';
+import {changeLanguage} from '../../redux/actions/filters';
+import {IntlProvider, FormattedMessage} from 'react-intl';
+import * as translations from '../../data/translation';
 
 const styles = (theme) => ({
   root: {
@@ -56,25 +63,27 @@ const styles = (theme) => ({
 
 const Layout = (props) => {
   const {classes} = props;
-  const [selectedView, setSelectedView] = useState('dashboard');
+  const [selectedView, setSelectedView] = useState(props.view);
   const [anchorEl, setAnchorEl] = useState(null);
-  const variant = useSelector( (state)=> state.showMsg.variant);
-  const infoMsg= useSelector( (state)=> state.showMsg.msg);
-  const showMsg= useSelector( (state)=> state.showMsg.open);
+  const variant = useSelector((state) => state.showMsg.variant);
+  const infoMsg = useSelector((state) => state.showMsg.msg);
+  const showMsg = useSelector((state) => state.showMsg.open);
+  const selectedLocale = useSelector((state) => state.filters.selectedLanguage);
   const dispatch = useDispatch();
 
   const menuEntries = [
-    {urlFrag: 'dashboard', label: 'Dashboard'},
-    {urlFrag: 'about', label: 'About'},
-    {urlFrag: 'libraries', label: 'Libaries used'},
-
+    {urlFrag: 'welcome', id: 'dropdown_welcome'},
+    {urlFrag: 'dashboard', id: 'dropdown_dashboard'},
+    {urlFrag: 'about', id: 'dropdown_about'},
+    {urlFrag: 'instructions', id: 'dropdown_instructions'},
+    {urlFrag: 'libraries', id: 'dropdown_lib'},
   ];
 
   const showView = (target) => {
     return (() => {
       setAnchorEl(null);
       setSelectedView(target);
-      window.location.href = '/#/' + target;
+      window.location.href = target;
     });
   };
 
@@ -93,16 +102,25 @@ const Layout = (props) => {
     dispatch(showStop());
   };
 
+  const handleLanguage = (language) => {
+    dispatch(changeLanguage(language));
+  };
+
   const renderMenuItem = (entry, idx) => {
     return (
       <MenuItem key={idx} onClick={entry.func ? entry.func : showView(entry.urlFrag)}>
-        <Typography variant="body1" className={classes.menuitem}>{entry.label}</Typography>
+        <Typography variant="body1" className={classes.menuitem}>
+          <FormattedMessage id={entry.id}/>
+        </Typography>
       </MenuItem>
     );
   };
 
   let selectedTabContent;
   switch (selectedView) {
+    case 'welcome':
+      selectedTabContent = <Welcome />;
+      break;
     case 'dashboard':
       selectedTabContent = <Dashboard />;
       break;
@@ -112,75 +130,91 @@ const Layout = (props) => {
     case 'libraries':
       selectedTabContent = <Libraries />;
       break;
+    case 'instructions':
+      selectedTabContent = <Instructions />;
+      break;
     default:
       selectedTabContent = <div>Error!</div>;
   }
 
+  const messages = translations[selectedLocale]; // get the translations for the locale
+
+
   return (
-    <div className={classes.root}>
-      <AppBar className={classes.appbar}>
-        <Toolbar>
-          <IconButton
-            className={classes.menuButton}
-            color="inherit"
-            aria-label="menu"
-            edge="start"
-            onClick={handleMenu}
-            size="large">
-            <MenuIcon/>
-          </IconButton>
-          <Menu
-            aria-label={'popover'}
-            id="simple-menu"
-            anchorEl={anchorEl}
-            getContentAnchorEl={null}
-            anchorOrigin={{vertical: 'bottom', horizontal: 'left'}}
-            transformOrigin={{vertical: 'top', horizontal: 'left'}}
-            open={Boolean(anchorEl)}
-            onClose={handleClose}
-          >
-            {menuEntries.map((entry, index) =>
-              renderMenuItem(entry, index))}
-          </Menu>
+    <IntlProvider locale={selectedLocale} messages={messages}>
+      <div className={classes.root}>
+        <AppBar className={classes.appbar}>
+          <Toolbar>
+            <IconButton
+              className={classes.menuButton}
+              color="inherit"
+              aria-label="menu"
+              edge="start"
+              onClick={handleMenu}
+              size="large">
+              <MenuIcon />
+            </IconButton>
+            <Menu
+              aria-label={'popover'}
+              id="simple-menu"
+              anchorEl={anchorEl}
+              getContentAnchorEl={null}
+              anchorOrigin={{vertical: 'bottom', horizontal: 'left'}}
+              transformOrigin={{vertical: 'top', horizontal: 'left'}}
+              open={Boolean(anchorEl)}
+              onClose={handleClose}
+            >
+              {menuEntries.map((entry, index) =>
+                renderMenuItem(entry, index))}
+            </Menu>
 
-          <Typography variant="h6" color="inherit" className={classes.grow}>
-            {config.title}
-          </Typography>
+            <Typography variant="h6" color="inherit" className={classes.grow}>
+              <FormattedMessage id='title'/>
+            </Typography>
 
-          {/* <Link title="small area estimation Github repo"
+            <Select value={selectedLocale}
+              sx={{bgcolor: 'white'}}
+              onChange={(e) => handleLanguage(e.target.value)}>
+              <MenuItem value='en'>English</MenuItem>
+              <MenuItem value='fr'>Français</MenuItem>
+            </Select>
+
+            {/* <Link title="small area estimation Github repo"
             href=
             "https://github.com/InstituteforDiseaseModeling/SmallAreaEstimationForSurveyIndicators"
             target="_blank">
             <GitHubIcon className={classes.github}/>
           </Link> */}
-        </Toolbar>
-      </AppBar>
-      <main className={classes.content}>
-        {selectedTabContent}
-        <Snackbar
-          anchorOrigin={{
-            vertical: 'top',
-            horizontal: 'center',
-          }}
-          open={showMsg}
-          autoHideDuration={variant === 'error' ? null : 6000}
-          onClose={handleSnackBarClose}
-          className={classes.snackbar}
-        >
-          <SnackbarContentWrapper
+          </Toolbar>
+        </AppBar>
+        <main className={classes.content}>
+          {selectedTabContent}
+          <Snackbar
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'center',
+            }}
+            open={showMsg}
+            autoHideDuration={variant === 'error' ? null : 6000}
             onClose={handleSnackBarClose}
-            variant={variant}
-            message={infoMsg}
-          />
-        </Snackbar>
-      </main>
-      <Footer/>
-    </div>
+            className={classes.snackbar}
+          >
+            <SnackbarContentWrapper
+              onClose={handleSnackBarClose}
+              variant={variant}
+              message={infoMsg}
+            />
+          </Snackbar>
+        </main>
+        <Footer />
+      </div>
+    </IntlProvider>
   );
 };
 
 Layout.propTypes = {
   classes: PropTypes.object,
+  view: PropTypes.string,
 };
 
 export default withStyles(styles)(Layout);

@@ -5,18 +5,26 @@ body {
 }
 
 .popupCustom {
-  display:flex,
+  max-width: 370px;
 }
 
 .popupCustom .col {
-  min-width:100px;
-  font-weight: bold
+  min-width:125px;
+  font-weight: bold;
+  margin-right: 5px;
 }
 
 .popupCustom .row {
-  display: flex
+  display: flex;
+  justify-content: space-between;
 }
 
 .popupCustom .border {
   border-bottom: solid 1px grey;
+}
+
+.leaflet-popup-content {
+  width: inherit !important;
+  max-width: 370px;
+  min-width: 300px;
 }

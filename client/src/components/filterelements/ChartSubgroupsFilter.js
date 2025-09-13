@@ -4,6 +4,7 @@ import FormGroup from '@mui/material/FormGroup';
 import Switch from '@mui/material/Switch';
 import * as _ from 'lodash';
 import PropTypes from 'prop-types';
+import {injectIntl} from 'react-intl';
 
 /**
  * component for a list of switches for toggling the display of charts
@@ -21,11 +22,11 @@ const ChartSubgroupsFilter = (props) => {
   // Create switches group
   const switches = groups.map((option) => {
     return (
-      <FormControlLabel key={option.id} label={option.text}
+      <FormControlLabel key={option} label={props.intl.formatMessage({id: option})}
         control={
-          <Switch key={option.id} color="primary"
-            checked={_.includes(selectedGroups, option.id)}
-            onChange={handleCheck} value={option.id}
+          <Switch key={option} color="primary"
+            checked={_.includes(selectedGroups, option)}
+            onChange={handleCheck} value={option}
           />}
       />
     );
@@ -42,7 +43,8 @@ ChartSubgroupsFilter.propTypes = {
   groups: PropTypes.array,
   selectedGroups: PropTypes.array,
   toggleGroup: PropTypes.func,
+  intl: PropTypes.func,
 };
 
 
-export default ChartSubgroupsFilter;
+export default injectIntl(ChartSubgroupsFilter);

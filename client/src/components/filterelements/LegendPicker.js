@@ -1,9 +1,10 @@
 import React from 'react';
 import {useDispatch, useSelector} from 'react-redux';
-import {Switch, FormControl, FormLabel, FormControlLabel} from '@mui/material';
+import {Switch, FormControl, FormLabel, FormControlLabel, Typography} from '@mui/material';
 import withStyles from '@mui/styles/withStyles';
 import {changeSelectedLegend} from '../../redux/actions/filters';
 import PropTypes from 'prop-types';
+import {FormattedMessage} from 'react-intl';
 
 const styles = {
   formControlLabel: {
@@ -11,6 +12,10 @@ const styles = {
     marginTop: 0,
     color: 'black',
     height: 22,
+    paddingBottom: 8,
+  },
+  label: {
+    fontSize: '0.9rem',
   },
   formLabel: {
     color: 'white',
@@ -22,8 +27,9 @@ const styles = {
     maxHeight: 400,
   },
   root: {
-    width: 140,
-    display: 'none',
+    // display: 'flex',
+    // justifyContent: 'space-evenly',
+    width: 220,
   },
 
 };
@@ -47,13 +53,21 @@ const LegendPicker = (props) => {
     <div className={classes.root}>
       <FormControl component='fieldset' variant='standard'>
         <FormLabel component='legend' className={classes.formLabel}>
-          Legend</FormLabel>
+          <FormattedMessage id='legend'/>
+        </FormLabel>
         <FormControlLabel className={classes.formControlLabel}
-          label={selectedLegend ? 'Standard': 'Custom'}
+          label={
+            selectedLegend ?
+            <Typography className={classes.label}>
+              <FormattedMessage id='equal_interval'/>
+            </Typography>:
+            <Typography className={classes.label}>
+              <FormattedMessage id='custom_legend'/>
+            </Typography>
+          }
           control={<Switch
             checked={selectedLegend}
             onChange={legendToggleChange}
-            // color="primary"
           />}>
         </FormControlLabel>
       </FormControl>
