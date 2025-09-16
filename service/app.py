@@ -1,6 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
-from controllers import africa_map, map, dot_names, indicators, subgroups, timeseries, shapes, years
+from service.controllers import africa_map, map, dot_names, indicators, subgroups, timeseries, shapes, years, events, layer_data
 
 app = FastAPI()
 
@@ -12,6 +12,8 @@ app.include_router(shapes.router)
 app.include_router(subgroups.router)
 app.include_router(timeseries.router)
 app.include_router(years.router)
+app.include_router(events.router)
+app.include_router(layer_data.router)
 
 
 @app.get("/")

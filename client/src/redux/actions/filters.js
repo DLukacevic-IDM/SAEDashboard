@@ -1,16 +1,23 @@
 import {
   CHANGE_SELECTED_STATE,
+  CHANGE_SELECTED_COMPARISON_STATE,
   CHANGE_SELECTED_YEAR,
+  CHANGE_SELECTED_MONTH,
   CHANGE_SELECTED_INDICATOR,
+  CHANGE_SELECTED_COMPARISON_INDICATOR,
   CHANGE_SELECTED_SUBGROUP,
+  CHANGE_SELECTED_COMPARISON_SUBGROUP,
   CHANGE_SELECTED_COUNTRY,
   CHANGE_SELECTED_MAP_THEME,
+  CHANGE_SELECTED_COMPARISON_MAP_THEME,
   CHANGE_MAP_LEGEND_MAX,
   CHANGE_MAP_LEGEND_MIN,
   CHANGE_ISADM3,
   CHANGE_LEGEND,
-  CHANGE_YEAR_MONTH,
+  CHANGE_COMPARE_YEAR,
   CHANGE_DIFF_MAP,
+  CHANGE_LEGEND_SYNC,
+  CHANGE_LANGUAGE,
   FETCH_DASHBOARD_DATA,
   SET_INDICATOR_DATA,
   SET_MAP_SUBGROUPS_DATA,
@@ -30,6 +37,18 @@ export function changeSelectedYear(year) {
   return {
     type: CHANGE_SELECTED_YEAR,
     year,
+  };
+}
+
+/**
+ * get change selected month message
+ * @param {*} month
+ * @return {*} change month message
+ */
+export function changeSelectedMonth(month) {
+  return {
+    type: CHANGE_SELECTED_MONTH,
+    month,
   };
 }
 
@@ -75,6 +94,7 @@ export function changeIsAdm3(isAdm3) {
 
 /**
  * change selected legend indicator
+ * true means normal legend and false means custom legend
  * @param {*} selectedLegend
  * @return {*} legend message
  */
@@ -87,14 +107,14 @@ export function changeSelectedLegend(selectedLegend) {
 
 
 /**
- * change select YearMonth filter
- * @param {*} selectedYearMonth
- * @return {*} selected year / month filter message
+ * change select Year filter in the comparison map filter
+ * @param {*} selectedYear
+ * @return {*} change year filter message
  */
-export function changeYearMonthFilter(selectedYearMonth) {
+export function changeCompareYearFilter(selectedYear) {
   return {
-    type: CHANGE_YEAR_MONTH,
-    selectedYearMonth,
+    type: CHANGE_COMPARE_YEAR,
+    selectedYear,
   };
 }
 
@@ -112,6 +132,18 @@ export function changeSelectedState(state) {
 }
 
 /**
+ * change selected country state / region for comparison map
+ * @param {*} state
+ * @return {*} selected state message
+ */
+export function changeSelectedComparisonState(state) {
+  return {
+    type: CHANGE_SELECTED_COMPARISON_STATE,
+    state,
+  };
+}
+
+/**
  * change selected indicator
  * @param {*} selectedIndicator
  * @return {*} selected indicator message
@@ -124,14 +156,14 @@ export function changeSelectedIndicator(selectedIndicator) {
 }
 
 /**
- * change selected subgroup
- * @param {*} selectedSubgroup
- * @return {*} selected subgroup message
+ * change selected comparison indicator
+ * @param {*} selectedComparisonIndicator
+ * @return {*} selected comparison indicator message
  */
-export function changeSelectedSubgroup(selectedSubgroup) {
+export function changeSelectedComparisonIndicator(selectedComparisonIndicator) {
   return {
-    type: CHANGE_SELECTED_SUBGROUP,
-    selectedSubgroup,
+    type: CHANGE_SELECTED_COMPARISON_INDICATOR,
+    selectedComparisonIndicator,
   };
 }
 
@@ -144,6 +176,18 @@ export function changeSelectedMapTheme(selectedMapTheme) {
   return {
     type: CHANGE_SELECTED_MAP_THEME,
     selectedMapTheme,
+  };
+}
+
+/**
+ * change selected map color theme for comparison map
+ * @param {*} selectedComparisonMapTheme
+ * @return {*} change selected map color theme message
+ */
+export function changeSelectedComparisonMapTheme(selectedComparisonMapTheme) {
+  return {
+    type: CHANGE_SELECTED_COMPARISON_MAP_THEME,
+    selectedComparisonMapTheme,
   };
 }
 
@@ -180,6 +224,18 @@ export function changeDiffMap(diffMap) {
   return {
     type: CHANGE_DIFF_MAP,
     diffMap,
+  };
+}
+
+/**
+ * toggle legend Sync value
+ * @param {*} legendSync
+ * @return {*} change legend sync toggle message
+ */
+export function changeLegendSync(legendSync) {
+  return {
+    type: CHANGE_LEGEND_SYNC,
+    legendSync,
   };
 }
 
@@ -227,8 +283,7 @@ export function setCountryData(countryData) {
  */
 export function fetchIndicatorData(dotName, isAdm3) {
   return apiAction({
-    url: '/indicators?dot_name=' + dotName + '&use_descendant_dot_names=True&admin_level=' +
-      (isAdm3?3:2),
+    url: '/indicators?dot_name=' + dotName + '&use_descendant_dot_names=True', // (isAdm3?3:2),
     onSuccess: setIndicatorData,
     onFailure: setError,
     label: FETCH_DASHBOARD_DATA,
@@ -267,4 +322,40 @@ export function fetchCountryData(isAdm3) {
     label: FETCH_DASHBOARD_DATA,
     headers: {'Access-Control-Allow-Origin': '*'},
   });
+}
+
+/**
+ * change language
+ * @param {*} language
+ * @return {*} set language message
+ */
+export function changeLanguage(language) {
+  return {
+    type: CHANGE_LANGUAGE,
+    language,
+  };
+}
+
+/**
+ * change selected subgroup for primary map
+ * @param {*} selectedSubgroup
+ * @return {*} selected subgroup message
+ */
+export function changeSelectedSubgroup(selectedSubgroup) {
+  return {
+    type: CHANGE_SELECTED_SUBGROUP,
+    selectedSubgroup,
+  };
+}
+
+/**
+ * change selected comparison subgroup
+ * @param {*} selectedComparisonSubgroup
+ * @return {*} selected comparison subgroup message
+ */
+export function changeSelectedComparisonSubgroup(selectedComparisonSubgroup) {
+  return {
+    type: CHANGE_SELECTED_COMPARISON_SUBGROUP,
+    selectedComparisonSubgroup,
+  };
 }

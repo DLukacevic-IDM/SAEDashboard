@@ -127,11 +127,36 @@ const Footer = (props) => {
   return (
     <div className={classes.footer}>
       <nav className={classes.nav}>
-        <div className={classes.leftrow}>
-          {/* Add your logo here */}
-        </div>
-        <div className={classes.rightrow}>
-        </div>
+        {/* <div className={classes.leftrow}>
+          <a href="https://gatesfoundation.org" target="blank">
+            <img src={bmgfLogo} title="Bill & Melinda Gates foundation" alt={'IDMlogo'}
+              className={classes.bmgflogo} />
+          </a>
+
+          <cite className={classes.cite}
+            title={'No reproduction or distribution without written permission of ' +
+            'Bill & Melinda Gates foundation. Attribution-Noncommercial-ShareAlike 4.0 License.'}>
+            <div className={classes.copyText}>
+              &copy; 1999-2023 Bill & Melinda Gates Foundation.
+            </div>
+            <div className={classes.copyText}>All Rights Reserved.</div>
+          </cite>
+
+        </div> */}
+        {/* <div className={classes.rightrow}>
+          <div className={classes.column}>
+            <a href="https://www.gatesfoundation.org/Terms-of-Use" target="_blank"
+              className={classes.link}
+              rel="noopener noreferrer">Terms of use</a>
+            <a href="https://www.gatesfoundation.org/Privacy-and-Cookies-Notice" target="_blank"
+              rel="noopener noreferrer"
+              className={classes.link}>Privacy & Cookies Notice</a>
+          </div>
+          <a href="http://www.idmod.org" target="blank">
+            <img src={idmlogo} title="Institute for Disease Modeling" alt={'IDMlogo'}
+              className={classes.idmlogo} />
+          </a>
+        </div> */}
       </nav>
     </div>
   );

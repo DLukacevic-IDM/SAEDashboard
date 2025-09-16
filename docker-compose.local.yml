@@ -1,12 +1,11 @@
-version: '3.8'
 services:
   service:
+    platform: linux/amd64
     build:
       context: ./service
       dockerfile: Dockerfile.local
       labels:
         git_url: ${GIT_URL}
-        git_commit: ${GIT_COMMIT}
         version: ${VERSION}
         maintainer: IDM
     environment:
@@ -19,7 +18,6 @@ services:
       dockerfile: Dockerfile.local
       labels:
         git_url: ${GIT_URL}
-        git_commit: ${GIT_COMMIT}
         version: ${VERSION}
         maintainer: IDM
       args:

@@ -1,0 +1,72 @@
+{
+  "Senegal": {
+    "BarcodeData": {
+      "2019": {
+        "site_data": {
+          "Test Site 1": {
+            "CODE": "TST1",
+            "ALT": "ALT1",
+            "TYPE": "TYPE1",
+            "GPS_2_Source": "Original",
+            "Lat_2": 12.34,
+            "Long_2": -10.56,
+            "Fraction_unique": 0.78,
+            "Fraction_polygenomic": 0.45,
+            "repeated_twice": 2,
+            "repeated_multiple": 1,
+            "heterozygosity": 0.12,
+            "n": 15
+          },
+          "Test Site 2": {
+            "CODE": "TST2",
+            "ALT": "ALT2",
+            "TYPE": "TYPE2",
+            "GPS_2_Source": "Original",
+            "Lat_2": 13.21,
+            "Long_2": -11.43,
+            "Fraction_unique": 0.56,
+            "Fraction_polygenomic": 0.34,
+            "repeated_twice": 1,
+            "repeated_multiple": 2,
+            "heterozygosity": 0.09,
+            "n": 8
+          }
+        }
+      }
+    },
+    "IncidenceData": {
+      "2019": [
+        {
+          "site": "Test Site 3",
+          "lat": 11.11,
+          "long": -12.12,
+          "incidence": 5.67
+        },
+        {
+          "site": "Test Site 4",
+          "lat": 12.22,
+          "long": -13.23,
+          "incidence": 8.91
+        }
+      ]
+    },
+    "CollectionSites": [
+      {
+        "SITE": "Test Site 14",
+        "CODE": "TST14",
+        "TYPE": "TYPE14",
+        "Source": "Source14",
+        "Lat": 22.22,
+        "Long": -23.23
+      },
+      {
+        "SITE": "Test Site 15",
+        "CODE": "TST15",
+        "TYPE": "TYPE15",
+        "Source": "Source15",
+        "Lat": 23.33,
+        "Long": -24.34
+      }
+    ]
+  }
+}

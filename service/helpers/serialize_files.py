@@ -1,9 +1,13 @@
+"""
+Script to serialize a .json file into a .shp.pickle file.
+"""
+
 import pickle
 import json
 import os
 
 # Folder where json files are located
-folder = "./data/shapefiles"
+folder = "/path-to-geojsons"
 
 for file in os.listdir(folder):
     if file.endswith('.json'):
@@ -16,3 +20,4 @@ for file in os.listdir(folder):
         # Write json data to .shp.pickle files
         with open(pickled_file, 'wb') as f:
             pickle.dump(data, file=f)
+

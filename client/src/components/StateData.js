@@ -1,15 +1,15 @@
+/* eslint-disable no-unused-vars */
 import React, {useEffect, useState} from 'react';
 import {Grid, Typography} from '@mui/material';
 import withStyles from '@mui/styles/withStyles';
 import StateDataChart from './StateDataChart';
 import ChartSubgroupsFilter from './filterelements/ChartSubgroupsFilter';
-import axios from 'axios';
 import * as _ from 'lodash';
 import Paper from '@mui/material/Paper';
-import {useSelector} from 'react-redux';
 import {Toolbar, AppBar, Link} from '@mui/material';
 import {ChartContext} from '../components/context/chartContext';
 import PropTypes from 'prop-types';
+import {FormattedMessage} from 'react-intl';
 
 const styles = {
   title: {
@@ -22,6 +22,7 @@ const styles = {
   chartArea: {
     padding: 5,
     margin: '-10px 5px 0px 5px',
+    minHeight: 478,
   },
   toggles: {
     textAlign: 'center',
@@ -40,7 +41,7 @@ const styles = {
     flexDirection: 'column',
     marginTop: 5,
     marginRight: -15,
-    width: 50,
+    width: 80,
   },
   link: {
     color: 'white',
@@ -50,20 +51,20 @@ const styles = {
 };
 
 const StateData = (props) => {
-  const {classes, selectedState, indicators} = props;
+  const {classes, selectedState, indicators, channel} = props;
 
   const [subgroups, setSubgroups] = useState([]);
   const [selectedGroups, setSelectedGroups] = useState([]);
-  const channel = useSelector((state) => state.filters.selectedIndicator);
 
   const [maxYAxisVal, setMaxYAxisVal] = useState(0);
   const [minYAxisVal, setMinYAxisVal] = useState(1000);
 
   const contextValue = {maxYAxisVal, setMaxYAxisVal, minYAxisVal, setMinYAxisVal};
+  const indObj = _.find(indicators, {'id': channel});
 
   /** show all groups */
   const showAll = () => {
-    setSelectedGroups(subgroups.map((i)=>i.id));
+    setSelectedGroups(indObj.subgroups);
   };
 
   /** hide all groups */
@@ -72,24 +73,19 @@ const StateData = (props) => {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      axios.defaults.baseURL = process.env.API_BASE_URL || '/api';
+    const indObj = _.find(indicators, {'id': channel});
 
-      const result = await axios(
-          '/subgroups?dot_name=' + selectedState,
-      );
-      // By default, select all groups
-      setSubgroups(result.data['subgroups']);
-      setSelectedGroups(_.map(result.data['subgroups'], (e) => e.id));
-    };
+    if (indObj) {
+      setSubgroups(indObj.subgroups);
+      setSelectedGroups(indObj.subgroups);
+    }
 
     // Only fetch if a state is selected!
     if (selectedState) {
-      fetchData();
       setMaxYAxisVal(0);
       setMinYAxisVal(1000);
     }
-  }, [selectedState]);
+  }, [selectedState, indicators.length, channel]);
 
   useEffect(()=> {
     setMaxYAxisVal(0);
@@ -106,11 +102,11 @@ const StateData = (props) => {
       // Was not present -> add it back using order from subgroups
       const newGroups = [...selectedGroups, toggleGroup];
       const newSelectedGroups = subgroups.filter((group) => {
-        if (newGroups.indexOf(group.id) > -1) {
-          return group.id;
+        if (newGroups.indexOf(group) > -1) {
+          return group;
         }
       });
-      setSelectedGroups(newSelectedGroups.map( (group)=>group.id));
+      setSelectedGroups(newSelectedGroups.map( (group)=>group));
     }
   };
 
@@ -118,7 +114,6 @@ const StateData = (props) => {
   if (subgroups.length === 0) {
     return null;
   }
-  const indObj = _.find(indicators, ['id', channel]);
 
 
   return (
@@ -132,10 +127,14 @@ const StateData = (props) => {
           <div className={classes.grow} key={1}/>
           <div className={classes.linkContainer} key={2}>
             <Link className={classes.link} onClick={showAll}>
-              <Typography variant="subtitle2">show all</Typography>
+              <Typography variant="subtitle2">
+                <FormattedMessage id="show_all"/>
+              </Typography>
             </Link>
             <Link className={classes.link} onClick={hideAll}>
-              <Typography variant="subtitle2">hide all</Typography>
+              <Typography variant="subtitle2">
+                <FormattedMessage id="hide_all"/>
+              </Typography>
             </Link>
           </div>
         </Toolbar>
@@ -149,14 +148,11 @@ const StateData = (props) => {
         </div>
         <Grid container spacing={1} >
           {selectedGroups.map((group) => {
-            const g = _.find(subgroups, ['id', group]);
-            const groupName = g ? g.text: '';
-
             return (
-              <Grid item xs={12} md={6} xl={4} key={groupName} >
+              <Grid item xs={12} md={12} key={group} >
                 <StateDataChart
                   group={group}
-                  groupName={groupName}
+                  groupName={group}
                   selectedState={selectedState}
                   channel={channel}
                   key={channel+selectedState}
@@ -174,6 +170,7 @@ StateData.propTypes = {
   classes: PropTypes.object,
   selectedState: PropTypes.string,
   indicators: PropTypes.array,
+  channel: PropTypes.string,
 };
 
 export default withStyles(styles)(StateData);

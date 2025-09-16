@@ -23,14 +23,45 @@ const OtherDashboardsReference = (props) => {
   return (
     <>
       <Typography variant="h6" className={classes.titleText}>
-        Example of SAEDashboard
+        Other Subnational Area Estimation Dashboards
       </Typography>
       <ul>
-        <li>
-          <Link href='https://sfpet.bmgf.io' target='_blank'>
-            Subnational Family Planning Estimation Tool (SFPET)
-          </Link>
-        </li>
+        {props.title != 'SFPET' &&
+          <li>
+            <Link href='https://sfpet.bmgf.io' target='_blank'>
+              Subnational Family Planning Estimation Tool (SFPET)
+            </Link>
+          </li>
+        }
+        {props.title != 'SSTIET' &&
+          <li>
+            <Link href='https://sstiet.bmgf.io' target='_blank'>
+              Subnational Sexually Transmitted Infection Estimation Tool (SSTIET)
+            </Link>
+          </li>
+        }
+        {props.title != 'SERII' &&
+          <li>
+            <Link href='https://serii.bmgf.io' target='_blank'>
+              Subnational estimation of routine immunization (SERII)
+            </Link>
+          </li>
+        }
+        {props.title != 'SEUNRI' &&
+          <li>
+            <Link href='https://seunri.bmgf.io' target='_blank'>
+              Subnational estimation of women with unmet need interacting with the health
+               system via routine immunization (SEUNRI)
+            </Link>
+          </li>
+        }
+        {props.title != 'SEVPKenya' &&
+          <li>
+            <Link href='https://sevpkenya.bmgf.io' target='_blank'>
+              Subnational estimation of vulnerable populations in Kenya (SEVPKenya)
+            </Link>
+          </li>
+        }
       </ul>
     </>
 

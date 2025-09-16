@@ -8,14 +8,40 @@ router = APIRouter()
 @router.get("/years", response_model=YearsSchema)
 async def get_years(request: Request):
     """
+    Retrieves the start and end years of available data for a given indicator and region.
+
+    This endpoint returns the time range (inclusive) for which indicator data exists
+    for a specific `dot_name`, `channel`, and `subgroup`. It helps define the temporal
+    bounds of the dataset before requesting time series or spatial data.
+
+    Query Parameters:
+        - dot_name (str): A hierarchical region identifier (e.g., "Africa:Senegal:Kolda").
+                          Only one `dot_name` is allowed per request.
+        - channel (str): The indicator name (e.g., "CDM", "MILDA").
+        - subgroup (str): A subgroup for which the indicator applies (e.g., "all").
+        - shape_version (int, optional): Version of the shapefile data to use.
+
+    Returns:
+        dict: A dictionary with the requested `dot_name` and the first and last years
+              of available indicator data.
+
     Example 1:
-    /years?dot_name=Africa:Benin:Borgou&channel=unmet_need&subgroup=all
-    return: {"dot_name": "Africa:Benin:Borgou", "fromYear":1990, "to_year":1994}
+    /years?dot_name=Africa:Senegal:Kolda&channel=CDM&subgroup=all&shape_version=1
+    return:
+        {
+          "id": "Africa:Senegal:Kolda",
+          "start_year": 2019,
+          "end_year": 2022
+        }
 
     Example 2:
-    /years?dot_name=Africa:Benin:NOTAPROVINCE&channel=unmet_need&subgroup=all
-    return: {"dot_name":"Africa:Benin:NOTAPROVINCE"}
-    :return: year related data
+    /years?dot_name=Africa:Senegal:Kolda:Kolda&channel=MILDA&subgroup=all
+    return:
+        {
+            "id": "Africa:Senegal:Kolda:Kolda",
+            "start_year": 2019,
+            "end_year": 2024
+        }
     """
     try:
         # handle get arguments
@@ -25,12 +51,9 @@ async def get_years(request: Request):
         dot_name = DotName(dot_name_str=dot_names[0])
         channel = read_channel(request=request)
         subgroup = read_subgroup(request=request)
+        shape_version = read_shape_version(request=request)
 
-        # TODO: the call to read version REALLY depends on how we version. Currently assumes file-based versioning,
-        # which the rest of the code may/moy not be able to handle at the moment.
-        version = read_version(request=request, country=dot_name.country, channel=channel, subgroup=subgroup)
-
-        df = get_dataframe(country=dot_name.country, channel=channel, subgroup=subgroup, version=version)
+        df = get_dataframe(country=dot_name.country, channel=channel, subgroup=subgroup, version=shape_version)
 
         # limit data to the requested dot_name only
         df = df.loc[df[DataFileKeys.DOT_NAME] == str(dot_name), :]
@@ -44,4 +67,8 @@ async def get_years(request: Request):
         return result
 
     except ControllerException as e:
-        return str(e), 400
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise  # re-raise deliberate FastAPI exceptions
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal server error")

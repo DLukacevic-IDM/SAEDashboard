@@ -4,6 +4,7 @@ import {MenuItem, Select} from '@mui/material';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import PropTypes from 'prop-types';
+import {FormattedMessage} from 'react-intl';
 
 /**
  * component for subgroup selection in the map chart
@@ -11,16 +12,23 @@ import PropTypes from 'prop-types';
  * @return {React.ReactElement}
  */
 const MapSubgroupsFilter = (props) => {
-  const {selectedSubgroup, changeSubgroup} = props;
-  const subGroups = useSelector((state) => state.filters.mapSubgroups);
+  const {selectedSubgroup, changeSubgroup, selectedIndicator, primary} = props;
+  const indicators = useSelector((state) => state.filters.indicators);
+  const indicatorObj = _.find(indicators, {id: selectedIndicator ? selectedIndicator : ''});
+  const subgroups = indicatorObj?.subgroups || [];
 
   return (
     <FormControl variant="standard">
-      <InputLabel htmlFor="mapsubgroup-select">Subgroups</InputLabel>
+      <InputLabel htmlFor="mapsubgroup-select">
+        <FormattedMessage id='subgroups'/>
+      </InputLabel>
       <Select id="mapsubgroup-select" value={selectedSubgroup || ''}
-        onChange={(e) => changeSubgroup(e.target.value)}>
-        {subGroups.map((field, i) => {
-          return (<MenuItem value={field.id} key={i}>{field.text}</MenuItem>);
+        onChange={(e) => changeSubgroup(primary, e.target.value)}>
+        {subgroups.map((field, i) => {
+          return (
+            <MenuItem value={field} key={i}>
+              <FormattedMessage id={field}/>
+            </MenuItem>);
         })}
       </Select>
     </FormControl>
@@ -30,6 +38,8 @@ const MapSubgroupsFilter = (props) => {
 MapSubgroupsFilter.propTypes = {
   selectedSubgroup: PropTypes.string,
   changeSubgroup: PropTypes.func,
+  selectedIndicator: PropTypes.string.isRequired,
+  primary: PropTypes.bool,
 };
 
 export default MapSubgroupsFilter;

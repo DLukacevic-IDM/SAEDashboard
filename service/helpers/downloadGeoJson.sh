@@ -1,3 +1,4 @@
+#! /bin/bash
 mkdir -p ./data/shapefiles
 
 # download shape files from GADM.org

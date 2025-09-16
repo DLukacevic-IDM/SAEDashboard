@@ -1,33 +1,66 @@
 /* eslint-disable camelcase */
 /* eslint-disable max-len */
 /* eslint-disable no-unused-vars */
-import React, {useRef, useEffect, useState, ObjectHTMLAttributes} from 'react';
-import {useSelector} from 'react-redux';
+import React, {useRef, useEffect, useLayoutEffect, useState, useContext} from 'react';
+import {useSelector, useDispatch} from 'react-redux';
 import {GeoJSON, LayerGroup, LeafletMouseEvent, FeatureGroup, GeoJSONOptions, Map} from 'leaflet';
-import MapLegend from './MapLegend';
+import MapLegend from './Legends/MapLegend.js';
 import {Feature, GeometryObject} from 'geojson';
 import chroma, {Color} from 'chroma-js';
 import customTheme from '../../customTheme.json';
-
+import {extraInfo} from './MapUtil';
 import {makeStyles} from '@mui/styles';
 import 'leaflet/dist/leaflet.css';
 import * as _ from 'lodash';
-
-import {MapData} from '../../common/types';
+import {injectIntl} from 'react-intl';
+import {IndicatorConfig} from '../constTs.tsx';
+import {ComparisonMapContext} from '../provider/comparisonMapProvider';
+import {Typography, Tooltip} from '@mui/material';
+import {FormattedMessage} from 'react-intl';
+// Export Image Component
+import ExportImageComponent from '../uielements/ExportImage.js';
 
 const styles = makeStyles({
   MapContainer: {
     backgroundColor: 'white',
     height: '100%',
   },
-
-  note: {
-    top: -22,
-    position: 'relative',
-    width: '100%',
-    textAlign: 'center',
-    textDecoration: 'underline',
-    fontSize: '0.9em',
+  mapTitle: {
+    position: 'absolute',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center', // vertical centering
+    top: 13,
+    left: 0,
+    right: 0,
+    width: '100%', // ensure it fills the parent
+    height: 30,
+    zIndex: 100,
+    pointerEvents: 'none', // allows clicks to pass through
+  },
+  note_diff: {
+    position: 'absolute',
+    fontSize: '0.8rem',
+    // backgroundColor: 'yellow',
+    padding: '0 5px',
+    left: 13,
+    whiteSpace: 'pre-wrap',
+    display: 'flex',
+    width: 'fit-content',
+    marginRight: 70,
+    bottom: 0,
+    alignItems: 'center',
+  },
+  extraInfo: {
+    marginLeft: 5,
+    color: 'white',
+    backgroundColor: '#256baf',
+    cursor: 'pointer',
+    padding: '0 5px',
+  },
+  flex: {
+    display: 'flex',
+    width: 'fit-content',
   },
 });
 
@@ -47,34 +80,48 @@ interface CustomTheme {
 
 const extenededlegendTheme: CustomTheme[] = customTheme;
 
-interface MapPros {
-  mapData: MapData[],
-  geoJson: object,
-  height: number,
-  selectPlace: (id:string | number)=>void,
-  selectedMapTheme: any,
-  primary: string,
-  indicator: string,
-}
+const IncidenceMap = ['reported_incidence',
+  'predicted_incidence',
+  'model_predictions',
+  'low_model_predictions',
+  'incidence',
+];
 
-const MapComponent = (props: MapPros) => {
-  const {mapData, geoJson, height, selectPlace, selectedMapTheme, primary, indicator} = props;
+export const isIncidenceMap = (indicator:string) => {
+  return IncidenceMap.includes(indicator);
+};
+
+const MapComponent = (props: any) => {
+  const {mapData, geoJson, height, selectPlace, selectedMapTheme, primary, indicator, intl} = props;
   const selectedLegend = useSelector((state:any) => state.filters.selectedLegend);
   const selectedDiffMap = useSelector((state:any) => state.filters.selectedDiffMap);
-  const healthClinicData = useSelector((state:any) => state.dashboard.healthClinicData);
+  const selectedLegendSync = useSelector((state:any) => state.filters.selectedLegendSync);
+  const layerData = useSelector((state:any) => state.dashboard.layerData);
   const currentYear = useSelector((state:any) => state.filters.currentYear);
-  const selectedYearMonth = useSelector((state:any) => state.filters.selectedYearMonth);
-  const selectedIndicator = useSelector((state:any) => state.filters.selectedIndicator);
-  const selectedSubgroup = useSelector((state:any) => state.filters.selectedSubgroup);
+  const currentMonth = useSelector((state:any) => state.filters.currentMonth);
+  const selectedYear = useSelector((state:any) => state.filters.selectedYear);
+  const primaryIndicator = useSelector((state:any) => state.filters.selectedIndicator);
   const mapLegendMax = useSelector((state:any) => state.filters.mapLegendMax);
   const mapLegendMin = useSelector((state:any) => state.filters.mapLegendMin);
+  const [selectedLayer, setSelectedLayer] = useState('');
+  const [unselectedLayer, setUnselectedLayer] = useState('');
+  const mapLabel = IndicatorConfig[indicator] ?
+    intl.formatMessage({id: IndicatorConfig[indicator].mapLabel}) : '';
+  const rasterFile = IndicatorConfig[indicator] ? IndicatorConfig[indicator].rasterFile : '';
+
+  const mainSpeciesName = IndicatorConfig[indicator].mainSpeciesName;
+  const hasExtraInfo = IndicatorConfig[indicator].extraInfo;
+
+  const indicatorConfig = IndicatorConfig[indicator];
+  const {latLngClicked, setLatLngClicked, zoom, setZoom, center, setCenter, closePopup, setClosePopup} = useContext(ComparisonMapContext);
+  const dispatch = useDispatch();
 
   // Data-related variables
 
   const minValueFromData = _.get(_.minBy(mapData, 'value'), 'value');
   const maxValueFromData = _.get(_.maxBy(mapData, 'value'), 'value');
-  let maxValue = selectedDiffMap ? maxValueFromData : mapLegendMax;
-  let minValue = selectedDiffMap ? minValueFromData : mapLegendMin;
+  let maxValue = (selectedDiffMap || !selectedLegendSync) ? maxValueFromData : mapLegendMax;
+  let minValue = (selectedDiffMap || !selectedLegendSync) ? minValueFromData : mapLegendMin;
 
   if (selectedDiffMap && !primary) {
     if (maxValue > minValue * -1) {
@@ -84,8 +131,22 @@ const MapComponent = (props: MapPros) => {
     }
   }
 
-
   const numberOfSteps: number = 10;
+  const isCovariateMap = () => {
+    if (primary) {
+      return primaryIndicator == 'neg_covars' || primaryIndicator == 'pos_covars';
+    } else {
+      return indicator == 'neg_covars' || indicator == 'pos_covars';
+    }
+  };
+
+  const isCovariateCategoryMap = () => {
+    if (primary) {
+      return primaryIndicator == 'neg_covars_category' || primaryIndicator == 'pos_covars_category';
+    } else {
+      return indicator == 'neg_covars_category' || indicator == 'pos_covars_category';
+    }
+  };
   const legend = useRef(null);
 
   interface FeatureAddOn extends GeoJSONOptions {
@@ -113,7 +174,7 @@ const MapComponent = (props: MapPros) => {
     layerFeature.properties['name'] = placeName;
 
     layer.on({
-      mouseover: highlightFeature,
+      mouseover: (e) => highlightFeature(e, null, false),
       mouseout: resetHighlight,
       click: ((e: LeafletMouseEvent) => {
         if (feature && feature.id) {
@@ -123,26 +184,66 @@ const MapComponent = (props: MapPros) => {
     });
   };
 
-
-  const highlightFeature = (e: LeafletMouseEvent, color: string = null) => {
+  const highlightFeature = (e: any, color: string = null, fromEffect: boolean) => {
     const feature = e.target;
     feature.setStyle({
       weight: 3,
       color: color ? color : '#FFCE74',
       dashArray: '',
-      fillOpacity: 0.7,
+      fillOpacity: 0.9,
     });
 
+    if (e.latlng && !fromEffect) {
+      setLatLngClicked({...e.latlng, LGA: feature.feature.properties.name});
+    };
+
+    showPopup(e, false);
+  };
+
+  const showPopup = (e: any, fromEffect: boolean) => {
+    const feature = e.target;
     if (feature && feature.feature) {
       const region = _.find(mapData, {id: feature.feature.id});
+
       if (region) {
         const regionName = region.id.split(':').splice(2).join(':');
-        const latlng = Array.isArray(feature._latlngs[0][0]) ?
-          feature._latlngs[0][0][0] : feature._latlngs[0][0];
+        let entireMsg = regionName;
+        if (region.others) {
+          // for indicators with additional data
+          const rowHTML = (val1: string, val2: string, val3: string) => (
+            '<div class="row"><div class="col">' + val1 + '</div><div>' + val2 + val3 + '</div></div>'
+          );
+          entireMsg = '<div class="popupCustom">';
+          entireMsg += '<div class="row border"><div class="col">'+ regionName +'</div></div>';
+          entireMsg += rowHTML(mainSpeciesName, Number((region.value * indicatorConfig.multiper).toFixed(indicatorConfig.decimalPt)).toLocaleString(), mapLabel);
+
+          for (const key in region.others) {
+            if (key) {
+              if (isNaN(region.others[key])) {
+                entireMsg += rowHTML(intl.formatMessage({id: key}), region.others[key], '');
+              } else {
+                entireMsg += rowHTML(key, Number((region.others[key] * indicatorConfig.multiper).toFixed(indicatorConfig.decimalPt)).toLocaleString(), mapLabel);
+              }
+            }
+          }
+          entireMsg += '</div>';
+        } else {
+          entireMsg += ' : <b>' + Number((region.value * indicatorConfig.multiper).toFixed(indicatorConfig.decimalPt)).toLocaleString() +
+          '</b> ' + mapLabel + '<br/>';
+        };
+
         window.L.popup()
             .setLatLng(e.latlng)
-            .setContent(regionName + ' : ' + (region.value*100).toFixed(2) + '%')
+            .setContent(entireMsg)
             .openOn(mapObj);
+      } else {
+      // todo: commented out as it is causing issue in
+      // no data popup
+      // const region = feature.feature.id.split(':').splice(2).join(':');
+      // window.L.popup()
+      //     .setLatLng(e.latlng)
+      //     .setContent(region + ': <b>' + intl.formatMessage({id: 'NoData_short'}) +'</b>')
+      //     .openOn(mapObj);
       }
     }
   };
@@ -160,82 +261,203 @@ const MapComponent = (props: MapPros) => {
    */
   const mapSetup = function() {
     const L = require('leaflet');
-
     const initialView = [14.4, -15];
 
-    mapObj = L.map(chart.current,
-        {
-          zoomSnap: 0.25,
-          zoomDelta: 0.25,
-          scrollWheelZoom: false,
-        },
-    ).setView(initialView, 6.8) as MapExtension;
+    if (mapObj) {
+      return;
+    }
+
+    mapObj = L.map(chart.current, {
+      zoomSnap: 0.25,
+      zoomDelta: 0.25,
+      scrollWheelZoom: false}).setView(initialView, 6.8) as MapExtension;
+
 
     const standardFeatureHandler = (feature:Feature) => {
       const region = _.find(mapData, {id: feature.id as any});
-      if (region && region.value) {
-        const color2 = scale(region.value);
-        return {fillColor: color2.toString(), fillOpacity: 0.7, fill: true, color: 'grey', weight: 0.8};
+      if (region && region.value != null) {
+        const colors = _.get(_.find(customTheme, {color: selectedMapTheme as any}), 'values');
+
+        let color2 = 'grey';
+        try {
+          color2 = !isCovariateMap() ? scale(region.value) :
+            colors[region.value-1];
+        } catch (e) {
+          // todo: log error
+          console.log('Error in color setting');
+        }
+        return {fillColor: isCovariateMap() ? '' : color2, fillOpacity: isCovariateMap() ? 0.02 : 0.7, fill: true, color: 'grey', weight: 1};
       } else {
-        return {color: 'lightgrey'};
+        return {color: 'grey', weight: 1, fillColor: ''};
       }
     };
 
-    // ... our listeners
+    // create map layer
     geojson = L.geoJSON(geoJson, {
       style: (feature: Feature) => {
-        if (selectedLegend || (selectedDiffMap && !primary)) {
-          // if it is a difference map, use the standard feature handler
-          return standardFeatureHandler(feature);
-        };
+        return standardFeatureHandler(feature);
       },
       onEachFeature: onEachFeature,
     });
 
-
     geojson.addTo(mapObj);
 
-    const bounds = geojson.getBounds();
-    mapObj.setView(bounds.getCenter(), 6.8);
-    mapObj.fitBounds(bounds);
+    const layerControl = L.control.layers().addTo(mapObj);
 
-    const icon = L.icon({
-      iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAApCAYAAADAk4LOAAAFgUlEQVR4Aa1XA5BjWRTN2oW17d3YaZtr2962HUzbDNpjszW24mRt28p47v7zq/bXZtrp/lWnXr337j3nPCe85NcypgSFdugCpW5YoDAMRaIMqRi6aKq5E3YqDQO3qAwjVWrD8Ncq/RBpykd8oZUb/kaJutow8r1aP9II0WmLKLIsJyv1w/kqw9Ch2MYdB++12Onxee/QMwvf4/Dk/Lfp/i4nxTXtOoQ4pW5Aj7wpici1A9erdAN2OH64x8OSP9j3Ft3b7aWkTg/Fm91siTra0f9on5sQr9INejH6CUUUpavjFNq1B+Oadhxmnfa8RfEmN8VNAsQhPqF55xHkMzz3jSmChWU6f7/XZKNH+9+hBLOHYozuKQPxyMPUKkrX/K0uWnfFaJGS1QPRtZsOPtr3NsW0uyh6NNCOkU3Yz+bXbT3I8G3xE5EXLXtCXbbqwCO9zPQYPRTZ5vIDXD7U+w7rFDEoUUf7ibHIR4y6bLVPXrz8JVZEql13trxwue/uDivd3fkWRbS6/IA2bID4uk0UpF1N8qLlbBlXs4Ee7HLTfV1j54APvODnSfOWBqtKVvjgLKzF5YdEk5ewRkGlK0i33Eofffc7HT56jD7/6U+qH3Cx7SBLNntH5YIPvODnyfIXZYRVDPqgHtLs5ABHD3YzLuespb7t79FY34DjMwrVrcTuwlT55YMPvOBnRrJ4VXTdNnYug5ucHLBjEpt30701A3Ts+HEa73u6dT3FNWwflY86eMHPk+Yu+i6pzUpRrW7SNDg5JHR4KapmM5Wv2E8Tfcb1HoqqHMHU+uWDD7zg54mz5/2BSnizi9T1Dg4QQXLToGNCkb6tb1NU+QAlGr1++eADrzhn/u8Q2YZhQVlZ5+CAOtqfbhmaUCS1ezNFVm2imDbPmPng5wmz+gwh+oHDce0eUtQ6OGDIyR0uUhUsoO3vfDmmgOezH0mZN59x7MBi++WDL1g/eEiU3avlidO671bkLfwbw5XV2P8Pzo0ydy4t2/0eu33xYSOMOD8hTf4CrBtGMSoXfPLchX+J0ruSePw3LZeK0juPJbYzrhkH0io7B3k164hiGvawhOKMLkrQLyVpZg8rHFW7E2uHOL888IBPlNZ1FPzstSJM694fWr6RwpvcJK60+0HCILTBzZLFNdtAzJaohze60T8qBzyh5ZuOg5e7uwQppofEmf2++DYvmySqGBuKaicF1blQjhuHdvCIMvp8whTTfZzI7RldpwtSzL+F1+wkdZ2TBOW2gIF88PBTzD/gpeREAMEbxnJcaJHNHrpzji0gQCS6hdkEeYt9DF/2qPcEC8RM28Hwmr3sdNyht00byAut2k3gufWNtgtOEOFGUwcXWNDbdNbpgBGxEvKkOQsxivJx33iow0Vw5S6SVTrpVq11ysA2Rp7gTfPfktc6zhtXBBC+adRLshf6sG2RfHPZ5EAc4sVZ83yCN00Fk/4kggu40ZTvIEm5g24qtU4KjBrx/BTTH8ifVASAG7gKrnWxJDcU7x8X6Ecczhm3o6YicvsLXWfh3Ch1W0k8x0nXF+0fFxgt4phz8QvypiwCCFKMqXCnqXExjq10beH+UUA7+nG6mdG/Pu0f3LgFcGrl2s0kNNjpmoJ9o4B29CMO8dMT4Q5ox8uitF6fqsrJOr8qnwNbRzv6hSnG5wP+64C7h9lp30hKNtKdWjtdkbuPA19nJ7Tz3zR/ibgARbhb4AlhavcBebmTHcFl2fvYEnW0ox9xMxKBS8btJ+KiEbq9zA4RthQXDhPa0T9TEe69gWupwc6uBUphquXgf+/FrIjweHQS4/pduMe5ERUMHUd9xv8ZR98CxkS4F2n3EUrUZ10EYNw7BWm9x1GiPssi3GgiGRDKWRYZfXlON+dfNbM+GgIwYdwAAAAASUVORK5CYII=',
-      iconSize: [24, 36],
-      iconAnchor: [12, 36],
+    const stationClicked = (station: RainfallStation) => {
+      dispatch(changeSelectedRainfallStation(station.Station));
+    };
+
+    mapObj.on('overlayadd', (data)=>{
+      if (_.get(data, 'layer.options._zIndex')) { // mostly for district names
+        data.layer.setZIndex(data.layer.options._zIndex);
+      }
+      setSelectedLayer(data.name);
+      setUnselectedLayer(null);
+    });
+    mapObj.on('overlayremove', (data)=>{
+      setUnselectedLayer(data.name);
+      setSelectedLayer(null);
+    });
+    comparisonEventSetup(mapObj);
+    setMapObj(mapObj);
+  };
+
+  const comparisonEventSetup = (mapObj: MapExtension) => {
+    // setup events
+    mapObj.on('zoomend', () => {
+      setZoom(mapObj.getZoom());
+    });
+    mapObj.on('dragend', () => {
+      setCenter(mapObj.getCenter());
     });
   };
 
   /**
+   * to find a map feature when a LGA is given
+   * @param {*} mapObj
+   * @param {*} latLng
+   * @return {*} a leaflet feature
+   */
+  const findFeatureByLGA = (mapObj: any, latLng:any) => {
+    if (!mapObj) return;
+    const feature = _.find(mapObj._layers, (layer) => {
+      if (layer.feature) {
+        const f: any = layer.feature;
+        return f.properties['name'] === latLng.LGA;
+      } else {
+        return false;
+      }
+    });
+    return feature;
+  };
+
+  // update zoom for comparisom map
+  useEffect(() => {
+    if (mapObj && zoom > 0) {
+      mapObj.setZoom(zoom);
+    }
+  }, [zoom]);
+  // update pan for comparisom map
+  useEffect(() => {
+    if (mapObj && center) {
+      mapObj.panTo([center.lat, center.lng]);
+    }
+  }, [center]);
+
+  /**
+  * for opening popup for the 2nd map on the comparison maps
+  */
+  useEffect(() => {
+    // if (forCompare) {
+    const feature = findFeatureByLGA(mapObj, latLngClicked);
+
+    if (feature) {
+      const mouseEvent : any = {
+        target: feature,
+        latlng: latLngClicked,
+      };
+      showPopup(mouseEvent, true);
+    }
+  }, [latLngClicked]);
+
+  /**
    * Component Initialization
    */
-  useEffect(() => {
+  useLayoutEffect(() => {
     mapSetup();
     return (() => {
+      if (mapObj) {
+        mapObj.remove();
+        mapObj = null;
+      }
     });
   }, []);
 
+  const dataSourceMsg = intl.formatMessage({id: 'data_source_'+indicator});
+
   return (
     <div style={{position: 'relative', width: '100%', height: '100%', minHeight: height, overflow: 'hidden'}}>
-      <div ref={chart} className={classes.MapContainer} id="chartContainer" />
-      <MapLegend minValue={minValue} numberOfSteps={numberOfSteps} mapLegendMax={maxValue}
-        selectedMapTheme={selectedMapTheme} legend={legend} primary={primary}
-        key={minValue + maxValue}/>
+      <div
+        ref={chart}
+        style={{position: 'relative', width: '100%', height: '100%'}}
+      >
+        <div className={classes.mapTitle}>
+          {/* Map Title */}
+          <Typography variant="h5">{intl.formatMessage({id: indicator})}</Typography>
+        </div>
+        <div ref={chart} className={classes.MapContainer} id="chartContainer">
+          <ExportImageComponent
+            targetNode={chart.current}
+            fileName="map.png"
+          />
+        </div>
+        {/* Map Legend */}
+        <MapLegend minValue={minValue} numberOfSteps={numberOfSteps} mapLegendMax={maxValue}
+          selectedMapTheme={selectedMapTheme} legend={legend} primary={primary} selectedLayer={selectedLayer}
+          unselectedLayer={unselectedLayer}
+          selectedIndicator={indicator}
+          key={minValue + maxValue + selectedLayer + indicator} />
 
-      {/* Difference note */}
-      {!primary && selectedDiffMap &&
-        <div className={classes.note} style={{'color': 'darkred'}}>
-          Difference is calculated by : {indicator} cases in { selectedYearMonth } - {selectedIndicator} cases in { currentYear}
-        </div>
-      }
-      {/* show chart note */}
-      {primary &&
-        <div className={classes.note}>
-            To show the time-series plots, click a region on the main map
-        </div>
-      }
+        {/* Difference note */}
+        {!primary && selectedDiffMap &&
+          <div className={classes.note_diff}>
+            {intl.formatMessage({id: 'difference_calculate_by'}) + ' : ' +
+              indicator + ' ' +
+            intl.formatMessage({id: 'in'}) + ' ' +
+            selectedYear + ' - ' + primaryIndicator + ' ' +
+            intl.formatMessage({id: 'in'}) + ' ' +
+            currentYear}
+          </div>
+        }
+        {/* Caveat note */}
+        {
+          <div className={classes.note_diff}>
+            {/* <div className={classes.flex} title={dataSourceMsg}>
+              {dataSourceMsg}
+            </div> */}
+            {hasExtraInfo &&
+              <div>
+                <Tooltip title={extraInfo(indicator)}
+                  componentsProps={{
+                    tooltip: {
+                      sx: {
+                        minWidth: 500,
+                      },
+                    },
+                  }}
+                >
+                  <div className={classes.extraInfo}>
+                    <FormattedMessage id="extra_info" />
+                  </div>
+                </Tooltip>
+              </div>
+            }
+          </div>
+        }
+      </div>
     </div>
   );
 };
 
-export default MapComponent;
+export default injectIntl(MapComponent);

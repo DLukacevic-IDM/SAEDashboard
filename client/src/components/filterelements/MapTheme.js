@@ -6,7 +6,7 @@ import withStyles from '@mui/styles/withStyles';
 import config from '../../app_config.json';
 import {DEFAULT_THEME} from '../../const';
 import PropTypes from 'prop-types';
-
+import {FormattedMessage} from 'react-intl';
 
 const styles = {
   menuPaper: {
@@ -15,11 +15,11 @@ const styles = {
 };
 
 const scales = [
-  'Accent', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'BuRd', 'Dark2', 'GnBu', 'Greens',
+  'Accent', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'BuRd', 'Dark2', 'GnBu', 'GnYlRd', 'Greens',
   'Greys', 'OrRd', 'Oranges', 'PRGn', 'Paired', 'Pastel1', 'Pastel2', 'PiYG',
   'PuBu', 'PuBuGn', 'PuOr', 'PuRd', 'Purples', 'RdBu', 'RdGy', 'RdPu', 'RdYlBu',
   'RdYlGn', 'Reds', 'Set1', 'Set2', 'Set3', 'Spectral', 'Viridis', 'YlGn', 'YlGnBu',
-  'YlOrBr', 'YlOrRd',
+  'YlOrBr', 'YlOrRd', 'GnRd',
 ];
 
 /**
@@ -28,13 +28,19 @@ const scales = [
  * @return {React.ReactElement}
  */
 const MapTheme = (props) => {
-  const {selectedMapTheme, changeMapTheme, classes, indicator} = props;
+  const {primary, selectedMapTheme, selectedComparisonMapTheme, changeMapTheme,
+    changeComparisonMapTheme, classes, indicator} = props;
 
   useEffect(()=> {
     if (!selectedMapTheme) {
       changeMapTheme(indicator && config &&
         config.defaultThemeByIndicator && config.defaultThemeByIndicator[indicator] ?
-        onfig.defaultThemeByIndicator[indicator] : DEFAULT_THEME);
+        config.defaultThemeByIndicator[indicator] : DEFAULT_THEME);
+    }
+    if (!selectedComparisonMapTheme) {
+      changeComparisonMapTheme(indicator && config &&
+        config.defaultThemeByIndicator && config.defaultThemeByIndicator[indicator] ?
+        config.defaultThemeByIndicator[indicator] : DEFAULT_THEME);
     }
   }, []);
 
@@ -48,25 +54,50 @@ const MapTheme = (props) => {
     changeMapTheme(selectedMapTheme);
   }, [selectedMapTheme]);
 
+  useEffect(() => {
+    if (selectedComparisonMapTheme) {
+      changeComparisonMapTheme(selectedComparisonMapTheme);
+    };
+  }, [selectedComparisonMapTheme]);
+
   return (
     <FormControl variant="standard">
-      <InputLabel htmlFor="mapTheme-select">Themes</InputLabel>
-      <Select id="mapTheme-select" value={selectedMapTheme ? selectedMapTheme : scales[0]}
-        style={{minWidth: '100px'}}
-        onChange={(e) => changeMapTheme(e.target.value)}
-        MenuProps={{classes: {paper: classes.menuPaper}}}
-      >
-        {scales.map((field, i) => {
-          return (<MenuItem value={field} key={i}>{field}</MenuItem>);
-        })}
-      </Select>
+      <InputLabel htmlFor="mapTheme-select">
+        <FormattedMessage id='themes'/>
+      </InputLabel>
+      {primary ?
+        <Select id="mapTheme-select" value={selectedMapTheme ? selectedMapTheme : scales[0]}
+          style={{minWidth: '100px'}}
+          onChange={(e) => changeMapTheme(e.target.value)}
+          MenuProps={{classes: {paper: classes.menuPaper}}}
+        >
+          {scales.map((field, i) => {
+            return (<MenuItem value={field} key={i}>{field}</MenuItem>);
+          })}
+        </Select> :
+        <Select id="mapTheme-select"
+          value={selectedComparisonMapTheme ? selectedComparisonMapTheme : scales[0]}
+          style={{minWidth: '100px'}}
+          onChange={(e) => changeComparisonMapTheme(e.target.value)}
+          MenuProps={{classes: {paper: classes.menuPaper}}}
+        >
+
+
+          {scales.map((field, i) => {
+            return (<MenuItem value={field} key={i}>{field}</MenuItem>);
+          })}
+        </Select>
+      }
     </FormControl>);
 };
 
 MapTheme.propTypes = {
+  primary: PropTypes.bool,
   classes: PropTypes.object,
   selectedMapTheme: PropTypes.string,
+  selectedComparisonMapTheme: PropTypes.string,
   changeMapTheme: PropTypes.func,
+  changeComparisonMapTheme: PropTypes.func,
   indicator: PropTypes.string,
 };
 

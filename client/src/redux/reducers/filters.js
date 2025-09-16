@@ -4,17 +4,24 @@ import {
   CHANGE_MAP_LEGEND_MIN,
   CHANGE_SELECTED_COUNTRY,
   CHANGE_SELECTED_INDICATOR,
-  CHANGE_SELECTED_SUBGROUP,
+  CHANGE_SELECTED_COMPARISON_INDICATOR,
   CHANGE_SELECTED_MAP_THEME,
+  CHANGE_SELECTED_COMPARISON_MAP_THEME,
   CHANGE_SELECTED_STATE,
+  CHANGE_SELECTED_COMPARISON_STATE,
   CHANGE_SELECTED_YEAR,
+  CHANGE_SELECTED_MONTH,
   CHANGE_LEGEND,
-  CHANGE_YEAR_MONTH,
+  CHANGE_COMPARE_YEAR,
   CHANGE_DIFF_MAP,
+  CHANGE_LEGEND_SYNC,
+  CHANGE_LANGUAGE,
   SET_COUNTRY_DATA,
   SET_INDICATOR_DATA,
   SET_MAP_SUBGROUPS_DATA,
   SET_YEAR_SLIDER_DATA,
+  CHANGE_SELECTED_SUBGROUP,
+  CHANGE_SELECTED_COMPARISON_SUBGROUP,
 } from '../actions/types';
 
 import config from '../../app_config.json';
@@ -22,19 +29,24 @@ import {AFRICA_STR} from '../../const';
 
 const initialState = {
   selectedState: config.defaultRegion,
+  selectedComparisonState: config.defaultRegion,
   selectedCountry: config.defaultCountry,
-  selectedYearMonth: config.defaultYear,
-  selectedLegend: true,
+  selectedYear: config.defaultYear,
+  selectedMonth: null,
+  selectedLegend: false,
   selectedDiffMap: false,
+  selectedLegendSync: false,
   isAdm3: false,
 
   countries: [],
   indicators: [],
   mapSubgroups: [],
+  selectedLanguage: 'fr',
 
   fromYear: 0,
   toYear: 0,
   currentYear: config.defaultYear ? config.defaultYear : 2023,
+  currentMonth: null,
   mapLegendMax: 0.25,
   mapLegendMin: 0,
   initialLoading: true,
@@ -51,24 +63,32 @@ export default function(state = initialState, action) {
     case CHANGE_SELECTED_YEAR:
       return {...state, currentYear: action.year};
 
+    case CHANGE_SELECTED_MONTH:
+      return {...state, currentMonth: action.month};
+
     case CHANGE_SELECTED_COUNTRY:
       if (action.selectedCountry === AFRICA_STR) {
         state.isAdm3 = false;
       }
-
       return {...state, selectedCountry: action.selectedCountry, selectedState: null};
 
     case CHANGE_SELECTED_STATE:
       return {...state, selectedState: action.state};
 
+    case CHANGE_SELECTED_COMPARISON_STATE:
+      return {...state, selectedComparisonState: action.state};
+
     case CHANGE_SELECTED_INDICATOR:
       return {...state, selectedIndicator: action.selectedIndicator};
 
-    case CHANGE_SELECTED_SUBGROUP:
-      return {...state, selectedSubgroup: action.selectedSubgroup};
+    case CHANGE_SELECTED_COMPARISON_INDICATOR:
+      return {...state, selectedComparisonIndicator: action.selectedComparisonIndicator};
 
     case CHANGE_SELECTED_MAP_THEME:
       return {...state, selectedMapTheme: action.selectedMapTheme};
+
+    case CHANGE_SELECTED_COMPARISON_MAP_THEME:
+      return {...state, selectedComparisonMapTheme: action.selectedComparisonMapTheme};
 
     case CHANGE_MAP_LEGEND_MAX:
       return {...state, mapLegendMax: action.mapLegendMax};
@@ -82,17 +102,28 @@ export default function(state = initialState, action) {
     case SET_INDICATOR_DATA:
       // Pick the first indicator as selected
       const indicators = action.indicatorData['indicators'];
-      const selectedIndicator = indicators.length > 0 ? indicators[0].id : null;
-      return {...state, indicators: indicators, selectedIndicator: selectedIndicator};
+      indicators.map((indicator) => {
+        indicator.subgroups.sort();
+      });
+      const foundTarget =_.find(indicators, {id: config.defaultIndicator});
+      const found2ndTarget =_.find(indicators, {id: config.defaultComparisonIndicator});
+
+      const selectedIndicator = indicators.length > 0 ?
+        foundTarget ? foundTarget.id : indicators[0].id :
+        null;
+
+      const selectedComparisonIndicator = indicators.length > 1 ?
+        found2ndTarget ? found2ndTarget.id : indicators[1].id :
+        null;
+
+      return {...state, indicators: indicators,
+        selectedComparisonIndicator: selectedComparisonIndicator,
+        selectedIndicator: selectedIndicator};
 
     case SET_MAP_SUBGROUPS_DATA:
       // Pick the first subgroup as selected
-      const subGroups = action.subgroupsData['subgroups'];
-      const allSubgroup = _.find(subGroups, {id: 'all'});
-      // default to use all subgroup if it is available
-      const selectedSubgroup = allSubgroup ? allSubgroup.id :
-        subGroups.length > 0 ? subGroups[0].id : null;
-      return {...state, mapSubgroups: subGroups, selectedSubgroup: selectedSubgroup};
+      const subGroups = _.sortBy(action.subgroupsData['subgroups'], ['id']);
+      return {...state, mapSubgroups: subGroups};
 
     case SET_COUNTRY_DATA:
       // Pick the first subgroup as selected
@@ -110,14 +141,23 @@ export default function(state = initialState, action) {
       state.selectedLegend = null;
       return {...state, selectedLegend: action.selectedLegend};
 
-    case CHANGE_YEAR_MONTH:
-
-      return {...state, selectedYearMonth: action.selectedYearMonth};
+    case CHANGE_COMPARE_YEAR:
+      return {...state, selectedYear: action.selectedYear};
 
     case CHANGE_DIFF_MAP:
-
       return {...state, selectedDiffMap: action.diffMap};
 
+    case CHANGE_LEGEND_SYNC:
+      return {...state, selectedLegendSync: action.legendSync};
+
+    case CHANGE_LANGUAGE:
+      return {...state, selectedLanguage: action.language};
+
+    case CHANGE_SELECTED_SUBGROUP:
+      return {...state, selectedSubgroup: action.selectedSubgroup};
+
+    case CHANGE_SELECTED_COMPARISON_SUBGROUP:
+      return {...state, selectedComparisonSubgroup: action.selectedComparisonSubgroup};
 
     default:
       return state;
