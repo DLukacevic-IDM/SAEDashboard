@@ -1,18 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from controllers import llm_runner
-import warnings
-import re
 
-# Suppress the specific FutureWarning related to google-cloud-storage
-warnings.filterwarnings(
-    "ignore", 
-    category=FutureWarning, 
-    message=re.escape(
-        "Support for google-cloud-storage < 3.0.0 will be removed in a future version of google-cloud-aiplatform. "
-        "Please upgrade to google-cloud-storage >= 3.0.0."
-    )
-)
 
 app = FastAPI()
 
