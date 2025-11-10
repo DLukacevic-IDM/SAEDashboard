@@ -5,6 +5,7 @@ node_modules
 .DS_Store
 *.pyc
 *.egg-info
+service/data/shapefiles
 client/build
 client/scripts
 .vscode
