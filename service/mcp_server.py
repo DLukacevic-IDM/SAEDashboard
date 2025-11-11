@@ -10,7 +10,6 @@ indicator datasets organized by country, channel (indicator), subgroup, and vers
 """
 
 import os
-import numpy as np
 import duckdb
 import pandas as pd
 

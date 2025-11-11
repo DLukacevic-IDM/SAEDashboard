@@ -124,3 +124,36 @@ virtualenv	https://virtualenv.pypa.io/	MIT License
 watchdog	https://github.com/gorakhargosh/watchdog	Apache Software License
 webencodings	https://github.com/SimonSapin/python-webencodings	BSD License
 zipp	https://github.com/jaraco/zipp	MIT License
+
+
+Backend llm service libraries
+============================
+
+chromadb	https://trychroma.com	Apache License 2.0
+fastapi	https://fastapi.tiangolo.com/	MIT License
+google-adk	https://github.com/google/adk-python	Apache Software License 2.0
+langchain	https://www.langchain.com/	MIT License
+langchain_chroma	https://pypi.org/project/langchain-chroma/	MIT License
+langchain-community	https://pypi.org/project/langchain-community/	MIT License
+langchain-huggingface	https://pypi.org/project/langchain-huggingface/	MIT License
+langchain-text-splitters	https://docs.langchain.com/	MIT License
+litellm	https://litellm.ai/	MIT License
+ollama	https://ollama.com/	MIT License
+pandas	https://pandas.pydata.org	BSD 3-Clause License
+pydantic	https://pydantic.dev/	MIT License
+pypdf	https://pypdf.readthedocs.io	BSD-3-Clause license
+requests	https://requests.readthedocs.io	Apache License 2.0
+sentence-transformers	https://www.sbert.net/	Apache License 2.0
+torch	https://pytorch.org/	BSD 3-Clause License
+torchvision	https://pytorch.org/vision/stable/index.html	BSD 3-Clause License
+torchaudio	https://docs.pytorch.org/audio/stable/index.html	BSD 3-Clause License
+uvicorn	https://www.uvicorn.org/	BSD 3-Clause License
+
+
+Backend mcp service libraries
+==============================
+
+duckdb	https://duckdb.org/	MIT License
+mcp	https://gofastmcp.com/getting-started/welcome	Apache License 2.0
+pandas	https://pandas.pydata.org	BSD 3-Clause License
+pydantic	https://pydantic.dev/	MIT License
