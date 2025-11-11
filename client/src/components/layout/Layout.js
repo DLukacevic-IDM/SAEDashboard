@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {useSelector, useDispatch} from 'react-redux';
 import {
   AppBar, IconButton, Menu, MenuItem, Toolbar, Typography,
-  Snackbar, Select,
+  Snackbar, Select, Drawer,
 } from '@mui/material';
 import withStyles from '@mui/styles/withStyles';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -18,6 +18,8 @@ import PropTypes from 'prop-types';
 import {changeLanguage} from '../../redux/actions/filters';
 import {IntlProvider, FormattedMessage} from 'react-intl';
 import * as translations from '../../data/translation';
+import AssistantIcon from '@mui/icons-material/Assistant';
+import LLMClient from '../LLMClient';
 
 const styles = (theme) => ({
   root: {
@@ -53,6 +55,12 @@ const styles = (theme) => ({
     cursor: 'pointer',
     color: 'white',
   },
+  llmButton: {
+    marginLeft: theme.spacing(2),
+  },
+  drawer: {
+    zIndex: 10000,
+  },
 });
 
 /**
@@ -65,6 +73,7 @@ const Layout = (props) => {
   const {classes} = props;
   const [selectedView, setSelectedView] = useState(props.view);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [LLMOpen, setLLMOpen] = useState(false);
   const variant = useSelector((state) => state.showMsg.variant);
   const infoMsg = useSelector((state) => state.showMsg.msg);
   const showMsg = useSelector((state) => state.showMsg.open);
@@ -137,12 +146,20 @@ const Layout = (props) => {
       selectedTabContent = <div>Error!</div>;
   }
 
+  const handleLLM = () => {
+    setLLMOpen(true);
+  };
+
+  const closeLLM = () => {
+    setLLMOpen(false);
+  };
+
   const messages = translations[selectedLocale]; // get the translations for the locale
 
 
   return (
     <IntlProvider locale={selectedLocale} messages={messages}>
-      <div className={classes.root}>
+      <div className={classes.root} style={{width: LLMOpen ? 'calc(100% - 440px)' : '100%'}}>
         <AppBar className={classes.appbar}>
           <Toolbar>
             <IconButton
@@ -179,6 +196,11 @@ const Layout = (props) => {
               <MenuItem value='fr'>Français</MenuItem>
             </Select>
 
+            <IconButton aria-label="delete" size="medium" onClick={handleLLM}
+              className={classes.llmButton}>
+              <AssistantIcon fontSize="medium" color="primary"/>
+            </IconButton>
+
             {/* <Link title="small area estimation Github repo"
             href=
             "https://github.com/InstituteforDiseaseModeling/SmallAreaEstimationForSurveyIndicators"
@@ -205,6 +227,13 @@ const Layout = (props) => {
               message={infoMsg}
             />
           </Snackbar>
+          <Drawer open={LLMOpen} anchor="right" variant="persistent"
+            classes={{
+              paper: classes.drawer,
+            }}
+          >
+            <LLMClient open={LLMOpen} closeDrawer={closeLLM}/>
+          </Drawer>
         </main>
         <Footer />
       </div>

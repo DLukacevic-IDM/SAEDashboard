@@ -28,3 +28,51 @@ export function createArray(lower, upper) {
 
   return result;
 }
+
+/**
+ *
+ * @return {object} - default headers for fetch request
+ */
+export function getDefaultHeaders() {
+  return {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+};
+
+/**
+ * @param {*} response - fetch response object
+ * @param {*} successHandler - function to call on success
+ * @param {*} failHandler - function to call on failure
+ * @return {object} - fetch response object
+ */
+export function handleResponse(response, successHandler, failHandler) {
+  if (response.ok) {
+    return response.json()
+        .then((data) => {
+          successHandler(data);
+        });
+  } else {
+    return response.text()
+        .then((data) => {
+          failHandler(data);
+        });
+  }
+}
+
+/**
+ * @param {*} data - response data
+ * @return {void} - alert user with error message
+ */
+export function handleError(data) {
+  if (!isJson(data)) {
+    alert(data);
+    return;
+  }
+  const jsonData = JSON.parse(data);
+
+  if (jsonData && jsonData.message) {
+    alert(jsonData.message);
+  }
+}
