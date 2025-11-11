@@ -8,6 +8,9 @@ services:
         git_url: ${GIT_URL}
         version: ${VERSION}
         maintainer: IDM
+    ports:
+      - "5000:5000"
+
     environment:
       - "FLASK_ENV=staging"
 
@@ -34,7 +37,7 @@ services:
     platform: linux/amd64
     # To build on mac:
     # platform: linux/arm64
-    image: ${MCP_IMAGE}:${VERSION}
+    # image: ${MCP_IMAGE}:${VERSION}
     build:
       context: ./service
       dockerfile: Dockerfile.mcp
@@ -54,7 +57,7 @@ services:
 
   llm:
     platform: linux/amd64
-    image: ${LLM_IMAGE}:${VERSION}
+    # image: ${LLM_IMAGE}:${VERSION}
     build:
       context: ./LLM
       dockerfile: Dockerfile
