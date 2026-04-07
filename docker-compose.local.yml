@@ -1,4 +1,18 @@
 services:
+  indicator-manager:
+    platform: linux/amd64
+    build:
+      context: ./indicator-manager
+      dockerfile: Dockerfile
+    ports:
+      - "5020:5020"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./indicator-manager-data:/data
+    depends_on:
+      - service
+
   service:
     platform: linux/amd64
     build:
@@ -26,10 +40,11 @@ services:
       args:
         - "GENERATE_SOURCEMAP=true"
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - service
       - llm
+      - indicator-manager
     environment:
       - REACT_APP_SERVICE=service
 

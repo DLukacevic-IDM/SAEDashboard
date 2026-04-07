@@ -19,7 +19,9 @@ import {changeLanguage} from '../../redux/actions/filters';
 import {IntlProvider, FormattedMessage} from 'react-intl';
 import * as translations from '../../data/translation';
 import AssistantIcon from '@mui/icons-material/Assistant';
+import TuneIcon from '@mui/icons-material/Tune';
 import LLMClient from '../LLMClient';
+import IndicatorManager from '../IndicatorManager';
 
 const styles = (theme) => ({
   root: {
@@ -74,6 +76,7 @@ const Layout = (props) => {
   const [selectedView, setSelectedView] = useState(props.view);
   const [anchorEl, setAnchorEl] = useState(null);
   const [LLMOpen, setLLMOpen] = useState(false);
+  const [indicatorManagerOpen, setIndicatorManagerOpen] = useState(false);
   const variant = useSelector((state) => state.showMsg.variant);
   const infoMsg = useSelector((state) => state.showMsg.msg);
   const showMsg = useSelector((state) => state.showMsg.open);
@@ -147,6 +150,7 @@ const Layout = (props) => {
   }
 
   const handleLLM = () => {
+    setIndicatorManagerOpen(false);
     setLLMOpen(true);
   };
 
@@ -154,12 +158,21 @@ const Layout = (props) => {
     setLLMOpen(false);
   };
 
+  const handleIndicatorManager = () => {
+    setLLMOpen(false);
+    setIndicatorManagerOpen(true);
+  };
+
+  const closeIndicatorManager = () => {
+    setIndicatorManagerOpen(false);
+  };
+
   const messages = translations[selectedLocale]; // get the translations for the locale
 
 
   return (
     <IntlProvider locale={selectedLocale} messages={messages}>
-      <div className={classes.root} style={{width: LLMOpen ? 'calc(100% - 440px)' : '100%'}}>
+      <div className={classes.root} style={{width: (LLMOpen || indicatorManagerOpen) ? 'calc(100% - 440px)' : '100%'}}>
         <AppBar className={classes.appbar}>
           <Toolbar>
             <IconButton
@@ -196,7 +209,12 @@ const Layout = (props) => {
               <MenuItem value='fr'>Français</MenuItem>
             </Select>
 
-            <IconButton aria-label="delete" size="medium" onClick={handleLLM}
+            <IconButton aria-label="manage indicators" size="medium" onClick={handleIndicatorManager}
+              className={classes.llmButton}>
+              <TuneIcon fontSize="medium" color="primary"/>
+            </IconButton>
+
+            <IconButton aria-label="ai assistant" size="medium" onClick={handleLLM}
               className={classes.llmButton}>
               <AssistantIcon fontSize="medium" color="primary"/>
             </IconButton>
@@ -233,6 +251,13 @@ const Layout = (props) => {
             }}
           >
             <LLMClient open={LLMOpen} closeDrawer={closeLLM}/>
+          </Drawer>
+          <Drawer open={indicatorManagerOpen} anchor="right" variant="persistent"
+            classes={{
+              paper: classes.drawer,
+            }}
+          >
+            <IndicatorManager closeDrawer={closeIndicatorManager}/>
           </Drawer>
         </main>
         <Footer />

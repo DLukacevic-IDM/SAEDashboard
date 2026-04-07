@@ -22,6 +22,7 @@ import {
   SET_INDICATOR_DATA,
   SET_MAP_SUBGROUPS_DATA,
   SET_COUNTRY_DATA,
+  SET_USER_INDICATORS,
   SHOW_ERROR,
 } from './types';
 import {apiAction} from './api';
@@ -359,3 +360,11 @@ export function changeSelectedComparisonSubgroup(selectedComparisonSubgroup) {
     selectedComparisonSubgroup,
   };
 }
+
+export function setUserIndicators(userIndicators) {
+  return {
+    type: SET_USER_INDICATORS,
+    userIndicators,
+  };
+}
+

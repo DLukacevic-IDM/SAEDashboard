@@ -78,6 +78,15 @@
   "all": "Tous",
   "all_groups": "Tous les groupes ciblés",
   "all_ages": "Tous les âges",
-  "na": "-"
+  "na": "-",
+  "indicator_manager": "Gérer les indicateurs",
+  "indicator_list": "Liste des indicateurs",
+  "add_indicator": "Ajouter un indicateur",
+  "upload_file": "Glissez-déposez un fichier CSV ou Excel ici",
+  "delete_confirm": "Tapez le nom de l'indicateur pour confirmer la suppression",
+  "default_indicator": "Par défaut",
+  "custom_indicator": "Personnalisé",
+  "hide_indicator": "Masquer",
+  "unhide_indicator": "Afficher"
 }
 

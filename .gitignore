@@ -10,3 +10,7 @@ client/build
 client/scripts
 .vscode
 .env
+.*/
+indicator-manager-data/
+./*.csv
+./*.xlsx

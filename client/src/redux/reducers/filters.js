@@ -22,6 +22,7 @@ import {
   SET_YEAR_SLIDER_DATA,
   CHANGE_SELECTED_SUBGROUP,
   CHANGE_SELECTED_COMPARISON_SUBGROUP,
+  SET_USER_INDICATORS,
 } from '../actions/types';
 
 import config from '../../app_config.json';
@@ -158,6 +159,14 @@ export default function(state = initialState, action) {
 
     case CHANGE_SELECTED_COMPARISON_SUBGROUP:
       return {...state, selectedComparisonSubgroup: action.selectedComparisonSubgroup};
+
+    case SET_USER_INDICATORS:
+      // Merge user indicators into the existing indicator list
+      const existingIds = new Set(state.indicators.map((i) => i.id));
+      const newUserIndicators = action.userIndicators
+          .filter((ui) => !existingIds.has(ui.id))
+          .map((ui) => ({...ui, isUserCreated: true}));
+      return {...state, indicators: [...state.indicators, ...newUserIndicators]};
 
     default:
       return state;

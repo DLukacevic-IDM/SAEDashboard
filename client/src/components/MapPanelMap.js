@@ -75,8 +75,14 @@ const MapPanelMap = (props) => {
 
   const indicator = primary ? selectedIndicator : selectedComparisonIndicator;
 
+  const isUserIndicator = (indId) => {
+    const ind = indicators.find((i) => i.id === indId);
+    return ind && ind.isUserCreated;
+  };
+
   const fetchData = async () => {
-    axios.defaults.baseURL = process.env.API_BASE_URL || '/api';
+    const activeIndicator = primary ? selectedIndicator : selectedComparisonIndicator;
+    axios.defaults.baseURL = isUserIndicator(activeIndicator) ? '/indicator-manager' : (process.env.API_BASE_URL || '/api');
     const dotName = selectedCountry;
 
     const mainShapeFileVersion = config.shapefileVersion[selectedIndicator] ?

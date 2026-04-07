@@ -36,15 +36,18 @@ const StateDataChart = (props) => {
   const [data, setData] = useState(null);
   const [isError, setIsError] = useState(false);
   const selectedLocale = useSelector((state) => state.filters.selectedLanguage);
+  const indicators = useSelector((state) => state.filters.indicators);
 
   const shapeFileVersion = config.shapefileVersion[channel] ?
     config.shapefileVersion[channel] : 1;
+
+  const isUserIndicator = indicators.find((i) => i.id === channel && i.isUserCreated);
 
   const dispatch = useDispatch();
   useEffect(() => {
     const fetchData = async () => {
       setIsError(false);
-      axios.defaults.baseURL = process.env.API_BASE_URL || '/api';
+      axios.defaults.baseURL = isUserIndicator ? '/indicator-manager' : (process.env.API_BASE_URL || '/api');
       try {
         const result = await axios(
             '/timeseries?dot_name=' + selectedState + '&channel=' + channel + '&subgroup=' +

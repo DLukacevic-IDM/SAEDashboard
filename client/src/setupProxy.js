@@ -17,4 +17,12 @@ module.exports = function(app) {
         },
       },
       ));
+  app.use('/indicator-manager',
+      createProxyMiddleware({
+        'target': 'http://' + '127.0.0.1' + ':5020',
+        'pathRewrite': {
+          '^/indicator-manager': '',
+        },
+      },
+      ));
 };
