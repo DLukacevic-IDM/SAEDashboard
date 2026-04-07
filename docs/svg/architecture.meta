@@ -1,0 +1,20 @@
+scope: System-level architecture showing all four services and their connections
+watch: docker-compose.local.yml, service/app.py, LLM/app.py, client/src/setupProxy.js
+
+edges:
+  Browser -> Client
+  Client -> Service_API [label="/api/*"]
+  Client -> LLM_Service [label="/llm/*"]
+  LLM_Service -> MCP_Server [label="SSE"]
+  Service_API -> Data_CSV_Shapefiles
+  MCP_Server -> Data_CSV_Shapefiles
+  LLM_Service -> PDF_Documents_ChromaDB
+
+nodes:
+  Browser: User browser
+  Client: React 18, Redux, MUI, Leaflet, AmCharts | :3000/:80
+  Service_API: FastAPI, Pandas, 10 endpoints | :5000
+  MCP_Server: FastMCP, DuckDB, 4 tools | :5010
+  LLM_Service: Google Agent SDK, LiteLLM, ChromaDB | :5001
+  Data_CSV_Shapefiles: service/data/ (CSV, pickle, events, layers)
+  PDF_Documents_ChromaDB: LLM/pdf_data/ → LLM/model/chroma_db/

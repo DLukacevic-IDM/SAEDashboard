@@ -1,0 +1,24 @@
+scope: End-to-end data flow from external sources through preparation, storage, services to frontend
+watch: service/helpers/controller_helpers.py, service/helpers/gadm_geojson_converter.py, service/helpers/indicator_data_converter.py, service/mcp_server.py
+
+layers:
+  external_sources: [IDM_Spatial_Models, DHS_Survey_Data, GADM_v4.1, PDF_Reports]
+  offline_prep: [indicator_data_converter, downloadGeoJson, gadm_geojson_converter]
+  data_store: [CSV_indicators, Shapefiles_pickle, events.csv, layer_data.json, ChromaDB]
+  runtime: [Service_API_5000, MCP_5010, LLM_5001]
+  frontend: [Maps, Charts, AI_Chat]
+
+edges:
+  IDM_Spatial_Models -> indicator_data_converter
+  DHS_Survey_Data -> indicator_data_converter
+  GADM_v4.1 -> downloadGeoJson
+  GADM_v4.1 -> gadm_geojson_converter
+  PDF_Reports -> ChromaDB
+  indicator_data_converter -> CSV_indicators
+  gadm_geojson_converter -> Shapefiles_pickle
+  CSV_indicators -> Service_API_5000
+  Shapefiles_pickle -> Service_API_5000
+  CSV_indicators -> MCP_5010
+  ChromaDB -> LLM_5001
+  Service_API_5000 -> Frontend [label="/api"]
+  LLM_5001 -> Frontend [label="/llm"]

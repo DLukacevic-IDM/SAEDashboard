@@ -53,3 +53,12 @@ To deploy the website locally without Docker, follow these steps:
   6. Run `yarn start` to start package and start the development web server.
 
 
+Documentation
+------------
+- [Domain Knowledge](docs/domain-knowledge.md) — SAE methodology, indicators, disaggregation, geographic hierarchy
+- [Data Ecosystem](docs/data-ecosystem.md) — CSV structure, shapefiles, naming conventions, data preparation tools
+- [Dashboard Features](docs/features.md) — Maps, charts, filters, comparison tools, AI assistant
+- [Architecture & Design](docs/architecture.md) — Tech stack, services, API endpoints, deployment
+- [Data Workflows](docs/data-workflows.md) — Data pipelines, request processing, LLM query routing
+
+

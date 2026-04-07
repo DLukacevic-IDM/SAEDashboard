@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="520" fill="#f8f9fa" rx="8"/>
+
+  <!-- Title -->
+  <text x="450" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#333">SAE Dashboard — System Architecture</text>
+
+  <!-- Browser -->
+  <rect x="340" y="50" width="220" height="45" rx="6" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="450" y="78" text-anchor="middle" font-weight="bold" fill="#1565c0">Browser</text>
+
+  <!-- Client -->
+  <rect x="260" y="120" width="380" height="100" rx="6" fill="#bbdefb" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="450" y="142" text-anchor="middle" font-weight="bold" fill="#0d47a1">Client (React 18, Redux, MUI)</text>
+  <text x="310" y="165" fill="#333" font-size="11">Leaflet Maps</text>
+  <text x="420" y="165" fill="#333" font-size="11">AmCharts</text>
+  <text x="520" y="165" fill="#333" font-size="11">LLM Panel</text>
+  <text x="310" y="185" fill="#333" font-size="11">Redux Store</text>
+  <text x="420" y="185" fill="#333" font-size="11">Filters</text>
+  <text x="520" y="185" fill="#333" font-size="11">i18n (en/fr)</text>
+  <text x="310" y="205" fill="#666" font-size="10">:3000 (dev) / :80 (prod via Nginx)</text>
+
+  <!-- Arrows Browser → Client -->
+  <line x1="450" y1="95" x2="450" y2="118" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Service API -->
+  <rect x="50" y="270" width="350" height="120" rx="6" fill="#c8e6c9" stroke="#2e7d32" stroke-width="1.5"/>
+  <text x="225" y="292" text-anchor="middle" font-weight="bold" fill="#1b5e20">Service API (FastAPI, Pandas)</text>
+  <text x="80" y="315" fill="#333" font-size="11">10 REST endpoints</text>
+  <text x="80" y="335" fill="#333" font-size="11">controller_helpers.py (data access)</text>
+  <text x="80" y="355" fill="#333" font-size="11">DotName hierarchy</text>
+  <text x="80" y="375" fill="#333" font-size="11">In-memory caching</text>
+  <text x="280" y="375" fill="#666" font-size="10">:5000</text>
+
+  <!-- MCP Server -->
+  <rect x="430" y="270" width="210" height="120" rx="6" fill="#fff3e0" stroke="#e65100" stroke-width="1.5"/>
+  <text x="535" y="292" text-anchor="middle" font-weight="bold" fill="#bf360c">MCP Server (FastMCP)</text>
+  <text x="445" y="315" fill="#333" font-size="11">get_db_description</text>
+  <text x="445" y="335" fill="#333" font-size="11">get_db_schema</text>
+  <text x="445" y="355" fill="#333" font-size="11">get_db_query_guidelines</text>
+  <text x="445" y="375" fill="#333" font-size="11">execute_db_query (DuckDB)</text>
+  <text x="600" y="375" fill="#666" font-size="10">:5010</text>
+
+  <!-- LLM Service -->
+  <rect x="670" y="270" width="210" height="120" rx="6" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1.5"/>
+  <text x="775" y="292" text-anchor="middle" font-weight="bold" fill="#4a148c">LLM Service</text>
+  <text x="685" y="315" fill="#333" font-size="11">Coordinator Agent</text>
+  <text x="685" y="335" fill="#333" font-size="11">SQLAnalyst Agent</text>
+  <text x="685" y="355" fill="#333" font-size="11">ChromaDB RAG</text>
+  <text x="685" y="375" fill="#333" font-size="11">LiteLLM (multi-provider)</text>
+  <text x="845" y="375" fill="#666" font-size="10">:5001</text>
+
+  <!-- Data Layer -->
+  <rect x="50" y="430" width="350" height="70" rx="6" fill="#f5f5f5" stroke="#757575" stroke-width="1.5"/>
+  <text x="225" y="455" text-anchor="middle" font-weight="bold" fill="#424242">Data (service/data/)</text>
+  <text x="80" y="478" fill="#333" font-size="11">CSV indicators  |  Shapefiles (pickle)  |  Events  |  Layers</text>
+
+  <!-- PDF Data -->
+  <rect x="670" y="430" width="210" height="70" rx="6" fill="#f5f5f5" stroke="#757575" stroke-width="1.5"/>
+  <text x="775" y="455" text-anchor="middle" font-weight="bold" fill="#424242">PDF Documents</text>
+  <text x="685" y="478" fill="#333" font-size="11">LLM/pdf_data/ → ChromaDB</text>
+
+  <!-- Arrows Client → Service -->
+  <line x1="370" y1="220" x2="225" y2="268" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="260" y="242" fill="#2e7d32" font-size="10">/api/*</text>
+
+  <!-- Arrows Client → LLM -->
+  <line x1="530" y1="220" x2="775" y2="268" stroke="#7b1fa2" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="650" y="242" fill="#7b1fa2" font-size="10">/llm/*</text>
+
+  <!-- Arrow LLM → MCP -->
+  <line x1="670" y1="330" x2="642" y2="330" stroke="#e65100" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="650" y="322" fill="#e65100" font-size="10">SSE</text>
+
+  <!-- Arrow Service → Data -->
+  <line x1="225" y1="390" x2="225" y2="428" stroke="#757575" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Arrow MCP → Data -->
+  <line x1="500" y1="390" x2="380" y2="428" stroke="#757575" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Arrow LLM → PDF -->
+  <line x1="775" y1="390" x2="775" y2="428" stroke="#757575" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Legend -->
+  <rect x="30" y="50" width="180" height="90" rx="4" fill="white" stroke="#ddd"/>
+  <text x="40" y="68" font-size="11" font-weight="bold" fill="#333">Legend</text>
+  <rect x="40" y="76" width="12" height="12" fill="#bbdefb" stroke="#1565c0"/>
+  <text x="58" y="87" font-size="10" fill="#333">Frontend</text>
+  <rect x="40" y="94" width="12" height="12" fill="#c8e6c9" stroke="#2e7d32"/>
+  <text x="58" y="105" font-size="10" fill="#333">Backend API</text>
+  <rect x="40" y="112" width="12" height="12" fill="#fff3e0" stroke="#e65100"/>
+  <text x="58" y="123" font-size="10" fill="#333">MCP / LLM</text>
+</svg>
