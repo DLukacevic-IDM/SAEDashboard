@@ -8,10 +8,43 @@ import anthropic
 
 from workflow.tools import TOOL_DISPATCH, execute_python
 
-MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-20250514")
+MODEL_FAST = os.getenv("ANTHROPIC_MODEL_FAST", "claude-sonnet-4-6")
+MODEL_STRONG = os.getenv("ANTHROPIC_MODEL_STRONG", "claude-opus-4-6")
 MAX_ITERATIONS = 25
+COMPLEXITY_THRESHOLD = 3
 
 sessions: dict[str, list] = {}
+session_models: dict[str, str] = {}
+
+
+def _complexity_score(tool_output: str, user_message: str) -> int:
+    score = 0
+
+    if "Multiple sheets found" in tool_output:
+        score += 2
+    col_match = re.search(r"(\d+) columns", tool_output)
+    if col_match:
+        n = int(col_match.group(1))
+        score += 2 if n > 10 else (1 if n > 7 else 0)
+
+    standard_cols = ["state", "pred", "pred_upper", "pred_lower", "year"]
+    present = sum(1 for c in standard_cols if re.search(rf"\b{c}\b", tool_output))
+    if present <= 1:
+        score += 2
+    elif present <= 3:
+        score += 1
+
+    complex_patterns = [
+        r"multiple\s+indicators?", r"\bmerge\b|\bjoin\b",
+        r"\bpivot\b|\breshape\b|\bmelt\b", r"custom\s+calculat",
+        r"\bderiv\w*\b|\baggreg", r"cross[\s-]?tab",
+        r"combin.*(?:file|sheet|dataset)", r"\brestructur",
+    ]
+    for pattern in complex_patterns:
+        if re.search(pattern, user_message, re.IGNORECASE):
+            score += 1
+
+    return score
 
 TOOLS = [
     {
@@ -216,11 +249,13 @@ def run_agent_stream(session_id: str, user_message: str, api_key: str | None = N
 
         generated_files: list[str] = []
         progress = 5
+        model = session_models.get(session_id, MODEL_FAST)
+        escalated = model == MODEL_STRONG
         yield sse({"type": "progress", "progress": progress, "message": "Thinking..."})
 
         for _ in range(MAX_ITERATIONS):
             response = client.messages.create(
-                model=MODEL,
+                model=model,
                 max_tokens=8192,
                 system=_system_prompt(session_id),
                 tools=TOOLS,
@@ -266,6 +301,14 @@ def run_agent_stream(session_id: str, user_message: str, api_key: str | None = N
             except Exception:
                 sessions[session_id].pop()
                 raise
+
+            if not escalated:
+                combined = " ".join(r.get("content", "") for r in tool_results)
+                if _complexity_score(combined, user_message) >= COMPLEXITY_THRESHOLD:
+                    model = MODEL_STRONG
+                    session_models[session_id] = model
+                    escalated = True
+                    yield sse({"type": "progress", "progress": progress, "message": "Complex data detected — switching to advanced model..."})
 
             sessions[session_id].append({"role": "user", "content": tool_results})
         else:
