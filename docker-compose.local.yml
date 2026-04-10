@@ -10,6 +10,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
       - ./mind-data:/data
+      - ./service/data/shapefiles:/data/shapefiles:ro
     depends_on:
       - service
 

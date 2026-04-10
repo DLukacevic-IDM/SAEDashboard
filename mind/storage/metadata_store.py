@@ -14,6 +14,7 @@ class IndicatorMetadata(BaseModel):
     subgroups: list[str]
     version: str
     color_theme: str = "RdBu"
+    shape_version: str = "1"
     hidden: bool = False
     is_user_created: bool = True
     created_at: str = ""

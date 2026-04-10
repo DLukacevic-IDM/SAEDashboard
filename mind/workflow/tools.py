@@ -1,7 +1,10 @@
+import os
+import pickle
 import re
 import subprocess
 import sys
 import time
+import unicodedata
 from pathlib import Path
 
 import pandas as pd
@@ -14,6 +17,7 @@ from storage.metadata_store import (
 UPLOADS_DIR = Path("/data/uploads")
 INDICATORS_DIR = Path("/data/indicators")
 TMP_DIR = Path("/data/tmp")
+SHAPES_DIR = Path(os.getenv("SHAPES_DIR", "/data/shapefiles"))
 
 uploads_cache: dict[str, pd.DataFrame] = {}
 
@@ -102,6 +106,7 @@ def finalize_indicator(
     subgroup: str,
     version: str,
     color_theme: str,
+    shape_version: str = "1",
 ) -> str:
     if session_id not in uploads_cache:
         return "ERROR: No data loaded. Call validate_upload and transform_csv first."
@@ -126,6 +131,7 @@ def finalize_indicator(
         subgroups=[subgroup],
         version=version,
         color_theme=color_theme,
+        shape_version=shape_version,
         csv_files=[filename],
         onboarding_notes=f"Onboarded via AI chat in session {session_id}",
     )
@@ -210,13 +216,99 @@ except Exception:
     return clean, [f"{session_id}/{Path(f.strip()).name}" for f in files]
 
 
+def _normalize(s: str) -> str:
+    return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode().lower()
+
+
+GEO_COLUMNS = ["state", "dot_name", "region", "district", "location", "area", "admin", "name"]
+SHAPE_RE = re.compile(r"^(.+)__l(\d+)__(\d+)\.shp\.pickle$")
+
+
+def detect_shape_version(session_id: str) -> str:
+    if session_id not in uploads_cache:
+        return "ERROR: No data loaded. Call validate_upload first."
+
+    df = uploads_cache[session_id]
+    geo_col = next((c for c in df.columns if c.lower() in GEO_COLUMNS), None)
+    if geo_col is None:
+        return (
+            "No geographic column found in the data. "
+            "Expected one of: " + ", ".join(GEO_COLUMNS)
+        )
+
+    geo_values = set(df[geo_col].dropna().unique())
+    if not geo_values:
+        return "Geographic column is empty."
+
+    geo_norm = {_normalize(str(v)): v for v in geo_values}
+
+    if not SHAPES_DIR.exists():
+        return "ERROR: Shapes directory not found at " + str(SHAPES_DIR)
+
+    results = []
+    for f in sorted(SHAPES_DIR.glob("*.shp.pickle")):
+        m = SHAPE_RE.match(f.name)
+        if not m:
+            continue
+        country, level, version = m.group(1), m.group(2), m.group(3)
+
+        with open(f, "rb") as fh:
+            geojson_dicts = pickle.load(fh)
+
+        shape_dns = set(geojson_dicts.keys())
+        shape_norm = {_normalize(dn): dn for dn in shape_dns}
+        shape_suffixes = {}
+        for norm_dn, orig_dn in shape_norm.items():
+            last = norm_dn.rsplit(":", 1)[-1]
+            shape_suffixes.setdefault(last, []).append(orig_dn)
+
+        matched = 0
+        for gn in geo_norm:
+            if gn in shape_norm:
+                matched += 1
+            elif gn.rsplit(":", 1)[-1] in shape_suffixes:
+                matched += 1
+
+        rate = matched / len(geo_values)
+        results.append({
+            "country": country, "admin_level": level, "shape_version": version,
+            "shape_regions": len(shape_dns), "data_regions": len(geo_values),
+            "matched": matched, "match_rate": rate,
+        })
+
+    if not results:
+        return "No shape files found in " + str(SHAPES_DIR)
+
+    results.sort(key=lambda r: (-r["match_rate"], -r["matched"]))
+    best = results[0]
+
+    lines = [f"Shape version detection (geographic column: '{geo_col}', {len(geo_values)} unique values):\n"]
+    for r in results:
+        marker = "  ** BEST MATCH" if r is best else ""
+        lines.append(
+            f"  {r['country']} admin_level={r['admin_level']} shape_version={r['shape_version']}: "
+            f"{r['matched']}/{r['data_regions']} matched ({r['match_rate']:.0%}), "
+            f"{r['shape_regions']} shapes available{marker}"
+        )
+
+    lines.append(f"\nRecommended: shape_version={best['shape_version']}, admin_level={best['admin_level']}")
+    if best["match_rate"] < 0.5:
+        lines.append(
+            "WARNING: Low match rate. The geographic names in the data may not align "
+            "with any available shape boundaries. Ask the user about their data source."
+        )
+    return "\n".join(lines)
+
+
 TOOL_DISPATCH = {
     "validate_upload": lambda inp, sid: validate_upload(sid, inp.get("sheet_name")),
     "preview_data": lambda inp, sid: preview_data(sid),
     "transform_csv": lambda inp, sid: transform_csv(sid, inp.get("transformations", {})),
     "list_existing_indicators": lambda inp, sid: list_existing_indicators(),
+    "detect_shape_version": lambda inp, sid: detect_shape_version(sid),
     "finalize_indicator": lambda inp, sid: finalize_indicator(
         sid, inp["name"], inp["display_name"], inp["description"],
         inp["country"], inp["subgroup"], inp["version"], inp.get("color_theme", "RdBu"),
+        inp.get("shape_version", "1"),
     ),
 }

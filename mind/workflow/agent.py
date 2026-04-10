@@ -95,6 +95,19 @@ TOOLS = [
         },
     },
     {
+        "name": "detect_shape_version",
+        "description": (
+            "Auto-detect which map boundary version best matches the geographic names in the uploaded data. "
+            "Compares the data's geographic column against all available shape files and reports match rates. "
+            "Call this after validate_upload and before finalize_indicator."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+    {
         "name": "finalize_indicator",
         "description": (
             "Write the transformed data as a finalized CSV indicator file and register its metadata. "
@@ -111,6 +124,7 @@ TOOLS = [
                 "subgroup": {"type": "string", "description": "Subgroup name (e.g. 'all', '15-24')"},
                 "version": {"type": "string", "description": "Version number (e.g. '1')"},
                 "color_theme": {"type": "string", "description": "Color palette for map (e.g. 'RdBu', 'Viridis')"},
+                "shape_version": {"type": "string", "description": "Map boundary version from detect_shape_version (e.g. '1')"},
             },
             "required": ["name", "display_name", "description", "country", "subgroup", "version"],
         },
@@ -176,10 +190,12 @@ Senegal regions: Dakar, Diourbel, Fatick, Kaffrine, Kaolack, Kédougou, Kolda, L
    - Which column(s) map to geographic regions? How should they be converted to dot_names?
    - What year(s) does the data cover?
    - What subgroup does this represent?
+   - **Geographic granularity** — ask the user: "Does your data cover the whole country, individual regions (like Dakar, Diourbel), or individual districts (like Pikine, Bambey)?" This determines the admin level for map visualization.
 4. Use `transform_csv` to reshape the data step by step
-5. Use `execute_python` for complex transformations or to generate preview visualizations
-6. Call `finalize_indicator` when the data is ready
-7. After finalization, use `execute_python` to generate a preview visualization (map or chart)
+5. Call `detect_shape_version` after the geographic/state column is present in the data. This auto-detects which map boundary version best matches the data. Use the recommended `shape_version` when finalizing. If the match rate is low, ask the user to clarify their geographic naming.
+6. Use `execute_python` for complex transformations or to generate preview visualizations
+7. Call `finalize_indicator` when the data is ready
+8. After finalization, use `execute_python` to generate a preview visualization (map or chart)
 
 ## Important Rules
 - Be conversational and helpful — users may not be technical
@@ -220,6 +236,7 @@ def _progress_msg(tool_name: str, tool_input: dict) -> str:
         "preview_data": "Analyzing data...",
         "transform_csv": "Transforming data...",
         "list_existing_indicators": "Checking existing indicators...",
+        "detect_shape_version": "Detecting map boundary version...",
         "finalize_indicator": "Finalizing indicator...",
         "execute_python": tool_input.get("description", "Running analysis...")[:80],
     }
