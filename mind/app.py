@@ -22,7 +22,7 @@ app.include_router(data.router)
 
 @app.get("/")
 async def root():
-    return {"service": "indicator-manager", "status": "ok"}
+    return {"service": "mind", "status": "ok"}
 
 
 if __name__ == "__main__":

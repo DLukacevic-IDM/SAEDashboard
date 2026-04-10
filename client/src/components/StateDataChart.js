@@ -47,7 +47,7 @@ const StateDataChart = (props) => {
   useEffect(() => {
     const fetchData = async () => {
       setIsError(false);
-      axios.defaults.baseURL = isUserIndicator ? '/indicator-manager' : (process.env.API_BASE_URL || '/api');
+      axios.defaults.baseURL = isUserIndicator ? '/mind' : (process.env.API_BASE_URL || '/api');
       try {
         const result = await axios(
             '/timeseries?dot_name=' + selectedState + '&channel=' + channel + '&subgroup=' +

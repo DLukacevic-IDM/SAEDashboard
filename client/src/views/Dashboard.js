@@ -56,11 +56,11 @@ const Dashboard = (props) => {
     // // Fetch the subgroup data
     dispatch(fetchMapSubgroupData(selectedCountry, selectedIsAdm3));
 
-    // Fetch user-created indicators from indicator-manager service
-    fetch('/indicator-manager/indicators-data')
+    // Fetch user-created indicators from mind service
+    fetch('/mind/indicators-data')
         .then((r) => r.json())
         .then((data) => dispatch(setUserIndicators(data.indicators || [])))
-        .catch(() => {}); // indicator-manager may not be running
+        .catch(() => {}); // mind may not be running
 
     document.onkeydown = (e) => {
       if (e.key==='1' && e.ctrlKey) {

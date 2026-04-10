@@ -11,6 +11,6 @@ client/scripts
 .vscode
 .env
 .*/
-indicator-manager-data/
+mind-data/
 ./*.csv
 ./*.xlsx

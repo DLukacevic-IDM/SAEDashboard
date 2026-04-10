@@ -80,7 +80,7 @@ const styles = {
   },
 };
 
-const API_BASE = '/indicator-manager';
+const API_BASE = '/mind';
 
 const IndicatorManager = (props) => {
   const {classes, closeDrawer} = props;
