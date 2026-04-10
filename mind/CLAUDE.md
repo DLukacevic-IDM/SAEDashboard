@@ -70,7 +70,9 @@ Required columns: `state`, `year`, `pred`, `pred_upper`, `pred_lower` (plus opti
 ## Environment Variables
 
 - `ANTHROPIC_API_KEY` — required (or passed per-request via `api_key` field)
-- `ANTHROPIC_MODEL` — defaults to `claude-opus-4-20250514`
+- `ANTHROPIC_MODEL_FAST` — default model (default: `claude-sonnet-4-6`)
+- `ANTHROPIC_MODEL_STRONG` — escalation model for complex tasks (default: `claude-opus-4-6`)
+- `SHAPES_DIR` — path to shape pickle files (default: `/data/shapefiles`)
 
 ## API Endpoints
 
