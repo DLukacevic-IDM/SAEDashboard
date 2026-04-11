@@ -109,10 +109,12 @@ const MapComponent = (props: any) => {
     intl.formatMessage({id: IndicatorConfig[indicator].mapLabel}) : '';
   const rasterFile = IndicatorConfig[indicator] ? IndicatorConfig[indicator].rasterFile : '';
 
-  const mainSpeciesName = IndicatorConfig[indicator].mainSpeciesName;
-  const hasExtraInfo = IndicatorConfig[indicator].extraInfo;
-
-  const indicatorConfig = IndicatorConfig[indicator];
+  const indicatorConfig = IndicatorConfig[indicator] || {
+    unitLabel: indicator, multiper: 1, unit: '', mapLabel: '%',
+    decimalPt: 2, legendLabel: '%',
+  };
+  const mainSpeciesName = indicatorConfig.mainSpeciesName;
+  const hasExtraInfo = indicatorConfig.extraInfo;
   const {latLngClicked, setLatLngClicked, zoom, setZoom, center, setCenter, closePopup, setClosePopup} = useContext(ComparisonMapContext);
   const dispatch = useDispatch();
 

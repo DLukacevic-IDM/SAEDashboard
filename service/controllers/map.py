@@ -154,14 +154,14 @@ async def get_map(request: Request):
                 new_values = df[[DataFileKeys.DOT_NAME, data_key, 'data_lower_bound', 'data_upper_bound']].rename(
                     columns={DataFileKeys.DOT_NAME: 'id', data_key: 'value'}, inplace=False).to_dict('records')
 
-            # Update 'data_lower_bound' and 'data_upper_bound' if they are NaN
             for record in new_values:
-                if pd.isna(record['data_lower_bound']):
+                if pd.isna(record.get('value')):
+                    continue
+                if pd.isna(record.get('data_lower_bound')):
                     record['data_lower_bound'] = record['value']
-                if pd.isna(record['data_upper_bound']):
+                if pd.isna(record.get('data_upper_bound')):
                     record['data_upper_bound'] = record['value']
-
-            return_list.extend(new_values)
+                return_list.append(record)
 
         return return_list
 

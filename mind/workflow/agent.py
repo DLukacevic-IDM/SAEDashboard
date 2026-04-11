@@ -8,7 +8,7 @@ import anthropic
 
 from workflow.tools import TOOL_DISPATCH, execute_python
 
-MODEL_FAST = os.getenv("ANTHROPIC_MODEL_FAST", "claude-sonnet-4-6")
+MODEL_FAST = os.getenv("ANTHROPIC_MODEL_FAST", "claude-opus-4-6") #"claude-sonnet-4-6")
 MODEL_STRONG = os.getenv("ANTHROPIC_MODEL_STRONG", "claude-opus-4-6")
 MAX_ITERATIONS = 25
 COMPLEXITY_THRESHOLD = 3

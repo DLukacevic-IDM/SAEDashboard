@@ -116,12 +116,12 @@ const StateDataChart = (props) => {
           <div className={classes.noDataOrLoading}>
             Error loading chart data...</div> :
           (
-            (IndicatorConfig[channel].chartType == 'stackBar' ||
-              IndicatorConfig[channel].chartType == 'bar') ?
+            ((IndicatorConfig[channel] || {}).chartType == 'stackBar' ||
+              (IndicatorConfig[channel] || {}).chartType == 'bar') ?
             <StackedBarChart chartData={data} title={group}
-              channel={IndicatorConfig[channel].mainSpeciesName}
+              channel={(IndicatorConfig[channel] || {}).mainSpeciesName}
               indicator={channel}
-              barType={IndicatorConfig[channel].chartType}
+              barType={(IndicatorConfig[channel] || {}).chartType}
               selectedState={selectedState} /> :
             <EventLineChart chartData={data} title={group} channel={channel}
               selectedState={selectedState} />

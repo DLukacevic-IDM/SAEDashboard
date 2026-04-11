@@ -178,8 +178,8 @@ const MapPanelMap = (props) => {
       let result = [];
       let result2 = [];
 
-      const result1UseAvg = IndicatorConfig[selectedIndicator].useAvg;
-      const result2UseAvg = IndicatorConfig[selectedComparisonIndicator].useAvg;
+      const result1UseAvg = (IndicatorConfig[selectedIndicator] || {}).useAvg;
+      const result2UseAvg = (IndicatorConfig[selectedComparisonIndicator] || {}).useAvg;
 
       if (resultRaw && resultRaw.data) {
         result = resultRaw.data.reduce(result1UseAvg ? averageFn : aggregateFn, []);

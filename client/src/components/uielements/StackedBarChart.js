@@ -33,7 +33,7 @@ const styles = ({
 const StackedBarChart = (props) => {
   const {chartData, classes, channel, barType, intl, indicator} = props;
   const transformedData = [];
-  const channelConfig = IndicatorConfig[indicator];
+  const channelConfig = IndicatorConfig[indicator] || {};
 
   console.log(barType);
 
