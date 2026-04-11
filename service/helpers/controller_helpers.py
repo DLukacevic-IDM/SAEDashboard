@@ -30,7 +30,7 @@ DATA_CACHE = {}
 SHAPE_CACHE = {}
 
 
-def clear_data_cache(filename: str | None = None):
+def clear_data_cache(filename=None):
     if filename:
         DATA_CACHE.pop(os.path.join(data_dir, filename), None)
     else:
