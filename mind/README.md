@@ -84,6 +84,116 @@ GET  /indicators-data   → dashboard-format indicator list
 GET  /files/{session_id}/{filename}[/raw]
 ```
 
+---
+
+## Testing: Adding a New Indicator
+
+This walkthrough uses the test file `Senegal__Genomic__DrugR__4Testing.xlsx` — genomic antimalarial drug resistance surveillance data from 13 collection sites across 7 Senegal regions (130 rows, 16 columns, year 2023).
+
+### What's in the test file
+
+| Column | Example values | Purpose |
+|--------|---------------|---------|
+| `Region` | Tambacounda, Diourbel, Kolda | Administrative region (7 unique) |
+| `Site` / `Code` | Gabou / GAB, Dialocoto / DIA | Collection site name and code (13 unique) |
+| `Year` | 2023 | Single year |
+| `Drug` | Sulfadoxine, Chloriquine, SP, ACT | Antimalarial drug (6 types) |
+| `Res_Marker` | DHFR, crt, Kelch13, MDR | Resistance marker gene (6 types) |
+| `Haplotype/SNP` | IRN, CVIET, NCS | Specific genetic variant (11 types) |
+| `Type` | Mutant, Wild Type | Whether the variant confers resistance |
+| `Haplotype frequency (%)` | 0.0 – 100.0 | **Main value** — prevalence of this variant |
+| `Predicted drug sensitivities` | "resistance to pyrimethamine", "none" | Clinical interpretation |
+| `Frequency category` | 0, 1, 2, 3 | Severity tier |
+| `Recommendation` | "Maintain surveillance", "Attention to resistance needed" | Action guidance |
+
+**Key challenge**
+- This is NOT one indicator — each (Drug, Res_Marker, Haplotype/SNP, Type) combination is a separate sub-indicator. 
+- The data also has multiple sites per region and uses site codes (GAB, DIA) that don't match standard shape boundaries.
+
+### Step-by-step guide
+
+#### 1. Start the service and upload
+
+```bash
+docker compose -f docker-compose.local.yml up mind
+```
+
+Upload `Senegal__Genomic__DrugR__4Testing.xlsx` via the UI or:
+```bash
+curl -F "file=@.local/Senegal__Genomic__DrugR__4Testing.xlsx" http://localhost:5020/upload
+```
+Note the `session_id` from the response.
+
+#### 2. Send the initial prompt
+
+> I want to add a drug resistance indicator for Senegal. This file has genomic surveillance data showing how common different antimalarial drug resistance markers are at collection sites. I'd like to focus on pyrimethamine resistance — specifically the DHFR-IRN mutation frequency — aggregated to the region level.
+
+**Why this prompt**: It tells the agent exactly which slice of the data to use (DHFR marker, IRN haplotype, Mutant type) and that we want region-level aggregation. Without this specificity, the agent would have to ask several rounds of questions about which drug/marker combination to use.
+
+**Expected**: The agent calls `validate_upload`, sees 16 columns / 130 rows, and will likely escalate to Opus (complexity score ≥ 3: >10 columns + no standard SAE columns).
+
+#### 3. Agent asks clarifying questions — suggested answers
+
+**Q: Which column contains the main indicator value?**
+> The "Haplotype frequency (%)" column — it's the prevalence of each genetic variant as a percentage. That should become the `pred` column.
+
+**Q: Do you have uncertainty bounds?**
+> No. Please generate reasonable bounds — maybe ±5 percentage points, but clamped to 0–100.
+
+**Q: How should the geographic data be mapped?**
+> The "Region" column has the region names (Tambacounda, Diourbel, etc.). Since there are multiple sites per region, average the frequency values within each region. The dot_name format should be Africa:Senegal:{Region}. Note: "Touba" in the data is a city in the Diourbel region — map it to Diourbel.
+
+**Q: Does your data cover the whole country, individual regions, or individual districts?**
+> Individual regions — like Tambacounda, Kolda, Diourbel.
+
+**Q: What subgroup does this represent?**
+> "all" — this isn't broken down by age or demographic group.
+
+#### 4. Expected agent actions
+
+The agent should:
+1. Filter to `Res_Marker == "DHFR"` and `Haplotype/SNP == "IRN"` and `Type == "Mutant"`
+2. Replace "Touba" → "Diourbel" in the Region column
+3. Group by Region and aggregate (mean of `Haplotype frequency (%)`)
+4. Create the `state` column as `Africa:Senegal:{Region}`
+5. Rename `Haplotype frequency (%)` → `pred`, generate `pred_upper` / `pred_lower`
+6. Add `year` = 2023
+7. Call `detect_shape_version` — should recommend **l2 v1** (6/7 regions match; Touba already remapped)
+8. Call `finalize_indicator`
+
+#### 5. Expected finalized output
+
+The finalized CSV (`Senegal__dhfr_irn_resistance__all__1.csv`) should have ~6-7 rows:
+
+| state | year | pred | pred_upper | pred_lower |
+|-------|------|------|------------|------------|
+| Africa:Senegal:Tambacounda | 2023 | ~78.0 | ~83.0 | ~73.0 |
+| Africa:Senegal:Diourbel | 2023 | ~64.4 | ~69.4 | ~59.4 |
+| ... | | | | |
+
+#### 6. Verify
+
+```bash
+# Check the indicator was registered
+curl http://localhost:5020/indicators
+
+# Check the CSV was written
+ls mind-data/indicators/Senegal__dhfr_irn_resistance__all__1.csv
+
+# Check shape_version in metadata
+cat mind-data/indicator_metadata.json | python3 -m json.tool
+```
+
+### What to watch for
+
+- **Model escalation**: The 16-column file with no standard SAE columns should trigger auto-escalation to Opus. Look for the SSE event: *"Complex data detected — switching to advanced model..."*
+- **Touba handling**: The agent must recognize Touba is not a standard region and remap it. If it doesn't, the shape version match rate will be lower.
+- **Shape detection**: `detect_shape_version` should recommend l2 v1 with ~86-100% match rate (6/7 or 7/7 regions after Touba remap).
+- **Aggregation**: Multiple sites per region must be averaged, not duplicated. The output should have one row per region per year.
+- **Bounds clamping**: Generated upper bounds should not exceed 100 (since the value is a percentage).
+
+---
+
 ## Environment Variables
 
 | Variable | Required | Default | Description |
