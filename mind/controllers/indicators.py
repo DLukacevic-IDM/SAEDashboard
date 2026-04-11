@@ -1,7 +1,9 @@
+import os
 import re
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
+import httpx
 import pandas as pd
 
 from storage.metadata_store import (
@@ -10,6 +12,7 @@ from storage.metadata_store import (
 
 router = APIRouter()
 INDICATORS_DIR = Path("/data/indicators")
+SERVICE_URL = os.getenv("SERVICE_URL", "http://service:5000")
 DATA_FILE_REGEX = re.compile(r'^(?P<country>.+)__(?P<channel>.+)__(?P<subgroup>.+)__(?P<version>.+)\.csv$')
 
 
@@ -45,7 +48,7 @@ def _get_indicator_data_meta(channel: str, country: str, subgroup: str, version:
     df = pd.read_csv(path)
     admin_levels = set()
     if "state" in df.columns:
-        admin_levels = set((df["state"].str.count(":")).unique())
+        admin_levels = {int(x) for x in (df["state"].str.count(":")).unique()}
     time_data = {}
     if "year" in df.columns:
         for year in sorted(df["year"].unique()):
@@ -101,6 +104,28 @@ async def patch_indicator(indicator_id: str, body: dict):
     updated = update_indicator(indicator_id, **{k: v for k, v in body.items() if k in ("hidden",)})
     if not updated:
         raise HTTPException(500, "Update failed")
+
+    if "hidden" in body:
+        try:
+            if updated.hidden:
+                httpx.post(
+                    f"{SERVICE_URL}/indicators/deregister",
+                    json={"indicator_id": indicator_id},
+                    timeout=30.0,
+                )
+            else:
+                for csv_file in updated.csv_files:
+                    path = INDICATORS_DIR / csv_file
+                    if path.exists():
+                        with open(path, "rb") as f:
+                            httpx.post(
+                                f"{SERVICE_URL}/indicators/register",
+                                files={"file": (csv_file, f, "text/csv")},
+                                timeout=30.0,
+                            )
+        except Exception:
+            pass
+
     return {"ok": True, "hidden": updated.hidden}
 
 
@@ -111,5 +136,13 @@ async def delete_indicator_endpoint(indicator_id: str):
         raise HTTPException(404, "Indicator not found")
     if not meta.is_user_created:
         raise HTTPException(403, "Cannot delete default indicators")
+    try:
+        httpx.post(
+            f"{SERVICE_URL}/indicators/deregister",
+            json={"indicator_id": indicator_id},
+            timeout=30.0,
+        )
+    except Exception:
+        pass
     delete_indicator(indicator_id)
     return {"ok": True}

@@ -4,6 +4,8 @@ from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException
 import pandas as pd
 
+from storage.metadata_store import list_indicators
+
 router = APIRouter()
 INDICATORS_DIR = Path("/data/indicators")
 DATA_FILE_REGEX = re.compile(r'^(?P<country>.+)__(?P<channel>.+)__(?P<subgroup>.+)__(?P<version>.+)\.csv$')
@@ -130,12 +132,16 @@ async def get_indicators_data(request: Request):
     if not INDICATORS_DIR.exists():
         return {"indicators": []}
 
+    hidden_ids = {m.id for m in list_indicators() if m.hidden}
+
     indicators: dict[str, dict] = {}
     for f in INDICATORS_DIR.glob("*.csv"):
         m = DATA_FILE_REGEX.match(f.name)
         if not m:
             continue
         channel = m["channel"]
+        if channel in hidden_ids:
+            continue
         if channel not in indicators:
             indicators[channel] = {
                 "id": channel,

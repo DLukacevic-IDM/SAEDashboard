@@ -278,7 +278,7 @@ const IndicatorManager = (props) => {
       </div>
 
       <Box sx={{borderBottom: 1, borderColor: 'divider'}}>
-        <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} variant="fullWidth">
+        <Tabs value={activeTab} onChange={(e, v) => { setActiveTab(v); if (v === 0) fetchIndicators(); }} variant="fullWidth">
           <Tab label={<FormattedMessage id='indicator_list' defaultMessage='Indicator List'/>} />
           <Tab label={<FormattedMessage id='add_indicator' defaultMessage='Add Indicator'/>} />
         </Tabs>
@@ -309,7 +309,7 @@ const IndicatorManager = (props) => {
                           color={ind.is_user_created ? 'primary' : 'default'}
                           style={{height: 20, fontSize: '0.7rem'}}
                         />
-                        {ind.hidden && <Chip label="Hidden" size="small" color="warning" style={{height: 20, fontSize: '0.7rem'}}/>}
+                        {ind.hidden && <Chip label="Not Listed" size="small" color="warning" style={{height: 20, fontSize: '0.7rem'}}/>}
                       </Box>
                     }
                     secondary={ind.country}
@@ -345,7 +345,7 @@ const IndicatorManager = (props) => {
                           onClick={() => toggleHide(ind.id, ind.hidden)}
                           variant="outlined"
                         >
-                          {ind.hidden ? 'Unhide' : 'Hide'}
+                          {ind.hidden ? 'Add to Dashboard' : 'Remove from Dashboard'}
                         </Button>
                         <Button
                           size="small"

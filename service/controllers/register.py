@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from pydantic import BaseModel
 
 from service.helpers.controller_helpers import (
     MASTER_DATA_FILE_REGEX, data_dir, clear_data_cache
@@ -11,6 +12,10 @@ from service.helpers.csv_validator import validate_indicator_csv
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+class DeregisterRequest(BaseModel):
+    indicator_id: str
 
 
 @router.post("/indicators/register")
@@ -53,3 +58,18 @@ async def register_indicator(file: UploadFile = File(...)):
     clear_data_cache(filename)
     logger.info(f"Registered indicator file: {filename} ({len(content)} bytes)")
     return {"status": "ok", "filename": filename, "bytes": len(content)}
+
+
+@router.post("/indicators/deregister")
+async def deregister_indicator(body: DeregisterRequest):
+    removed = []
+    for f in Path(data_dir).glob("*.csv"):
+        m = MASTER_DATA_FILE_REGEX.match(f.name)
+        if m and m["channel"] == body.indicator_id:
+            clear_data_cache(f.name)
+            f.unlink()
+            removed.append(f.name)
+    if not removed:
+        raise HTTPException(status_code=404, detail=f"No files found for indicator '{body.indicator_id}'")
+    logger.info(f"Deregistered indicator: {body.indicator_id}, removed {len(removed)} files")
+    return {"status": "ok", "removed": removed}
