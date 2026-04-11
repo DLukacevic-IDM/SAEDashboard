@@ -154,12 +154,38 @@ def finalize_indicator(
         n_regions = df["state"].nunique()
         regions = f", {n_regions} regions"
 
-    return (
+    summary = (
         f"Indicator '{display_name}' saved successfully.\n"
         f"File: {filename} ({row_count} rows{year_range}{regions})\n"
         f"Color theme: {color_theme}\n"
-        f"The indicator is now available in the dashboard."
     )
+
+    import httpx
+    service_url = os.getenv("SERVICE_URL", "http://service:5000")
+    try:
+        with open(output_path, "rb") as f:
+            resp = httpx.post(
+                f"{service_url}/indicators/register",
+                files={"file": (filename, f, "text/csv")},
+                timeout=30.0,
+            )
+        if resp.status_code == 200:
+            summary += "The indicator is now available in the dashboard."
+        else:
+            detail = resp.text[:200]
+            summary += (
+                f"WARNING: Failed to register with dashboard service "
+                f"(HTTP {resp.status_code}: {detail}). "
+                f"The indicator may not appear until manually synced."
+            )
+    except Exception as e:
+        summary += (
+            f"WARNING: Could not reach dashboard service "
+            f"({type(e).__name__}: {e}). "
+            f"The indicator may not appear until manually synced."
+        )
+
+    return summary
 
 
 METADATA_PREFIXES = ("META:", "FILE_SAVED:", "SCHEMA:", "SHAPE:", "COLUMNS:", "DTYPE:", "ERROR:", "INFO:")

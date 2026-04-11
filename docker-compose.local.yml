@@ -8,6 +8,7 @@ services:
       - "5020:5020"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - SERVICE_URL=http://service:5000
     volumes:
       - ./mind-data:/data
       - ./service/data/shapefiles:/data/shapefiles:ro

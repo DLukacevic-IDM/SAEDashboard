@@ -52,7 +52,8 @@ setup(
         'numpy~=1.24.1',
         'pandas~=1.5.3',
         'packaging~=23.0',
-        'PyYAML~=6.0.2'
+        'PyYAML~=6.0.2',
+        'python-multipart>=0.0.6'
     ],
 
     extras_require={

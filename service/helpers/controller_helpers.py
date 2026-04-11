@@ -29,6 +29,14 @@ from service.helpers.dot_name import DotName
 DATA_CACHE = {}
 SHAPE_CACHE = {}
 
+
+def clear_data_cache(filename: str | None = None):
+    if filename:
+        DATA_CACHE.pop(os.path.join(data_dir, filename), None)
+    else:
+        DATA_CACHE.clear()
+
+
 # Regular expressions to parse standardized file naming formats
 MASTER_DATA_FILE_REGEX = re.compile(
     '^(?P<country>.+)__(?P<channel>.+)__(?P<subgroup>.+)__(?P<version>.+)\.csv$')
