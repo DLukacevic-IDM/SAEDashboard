@@ -18,10 +18,25 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
     setValues((prev) => ({...prev, [name]: val}));
   };
 
-  const allRequiredFilled = (form.fields || []).every((f) => {
-    if (!f.required) return true;
+  const getFieldError = (field) => {
+    const val = values[field.name];
+    if (!val && !field.required) return null;
+    if (field.validation) {
+      try {
+        if (val && !new RegExp(field.validation.pattern).test(val)) {
+          return field.validation.message || 'Invalid value';
+        }
+      } catch (e) { /* ignore bad regex */ }
+    }
+    return null;
+  };
+
+  const allValid = (form.fields || []).every((f) => {
     const v = values[f.name];
-    return f.type === 'checkbox' ? true : (v != null && v !== '');
+    const filled = f.type === 'checkbox' ? true : (v != null && v !== '');
+    if (f.required && !filled) return false;
+    if (getFieldError(f)) return false;
+    return true;
   });
 
   const handleSubmit = () => {
@@ -30,6 +45,7 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
 
   const renderField = (field) => {
     const val = values[field.name];
+    const error = getFieldError(field);
     switch (field.type) {
       case 'select':
         return (
@@ -38,7 +54,10 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
             <Select
               value={val}
               label={field.label}
+              displayEmpty
               onChange={(e) => handleChange(field.name, e.target.value)}
+              renderValue={(selected) => selected || <span style={{color: '#aaa'}}>{field.placeholder || ''}</span>}
+              MenuProps={{sx: {zIndex: 10001}}}
             >
               {(field.options || []).map((opt) => (
                 <MenuItem key={opt} value={opt}>{opt}</MenuItem>
@@ -70,9 +89,11 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
             fullWidth size="small"
             multiline minRows={2} maxRows={4}
             label={field.label}
+            placeholder={field.placeholder}
             value={val}
             onChange={(e) => handleChange(field.name, e.target.value)}
-            helperText={field.helperText}
+            error={!!error}
+            helperText={error || field.helperText}
             disabled={disabled}
             sx={{mb: 1.5}}
           />
@@ -99,9 +120,11 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
             key={field.name}
             fullWidth size="small"
             label={field.label}
+            placeholder={field.placeholder}
             value={val}
             onChange={(e) => handleChange(field.name, e.target.value)}
-            helperText={field.helperText}
+            error={!!error}
+            helperText={error || field.helperText}
             disabled={disabled}
             sx={{mb: 1.5}}
           />
@@ -117,7 +140,7 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
         <Button
           variant="contained" size="small" fullWidth
           onClick={handleSubmit}
-          disabled={!allRequiredFilled}
+          disabled={!allValid}
           sx={{mt: 0.5}}
         >
           {form.submitLabel || 'Submit'}
@@ -140,6 +163,11 @@ ChatFormRenderer.propTypes = {
       default: PropTypes.any,
       required: PropTypes.bool,
       helperText: PropTypes.string,
+      placeholder: PropTypes.string,
+      validation: PropTypes.shape({
+        pattern: PropTypes.string,
+        message: PropTypes.string,
+      }),
     })).isRequired,
   }).isRequired,
   onSubmit: PropTypes.func.isRequired,

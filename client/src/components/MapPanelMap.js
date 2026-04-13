@@ -252,20 +252,23 @@ const MapPanelMap = (props) => {
   }
 
   // calculate final theme based on config
+  const userTheme = (indicators.find((i) => i.id === indicator) || {}).color_theme;
+  const configTheme = config.defaultThemeByIndicator && config.defaultThemeByIndicator[indicator];
+  const indicatorTheme = configTheme || userTheme;
   let finalTheme = null;
 
   if (primary) {
     finalTheme = indicator && DEFAULT_THEMES.indexOf(selectedMapTheme) >= 0 ?
-      config.defaultThemeByIndicator[indicator] :
+      indicatorTheme || selectedMapTheme :
       selectedMapTheme;
   } else {
     finalTheme = indicator && DEFAULT_THEMES.indexOf(selectedComparisonMapTheme)>=0 ?
-      config.defaultThemeByIndicator[indicator] :
+      indicatorTheme || selectedComparisonMapTheme :
       selectedComparisonMapTheme;
   }
   // keep theme for covars related indicators
   if (indicator.indexOf('covars')>-1) {
-    finalTheme =config.defaultThemeByIndicator[indicator];
+    finalTheme = configTheme;
   }
 
 

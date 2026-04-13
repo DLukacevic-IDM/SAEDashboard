@@ -132,7 +132,8 @@ async def get_indicators_data(request: Request):
     if not INDICATORS_DIR.exists():
         return {"indicators": []}
 
-    hidden_ids = {m.id for m in list_indicators() if m.hidden}
+    all_meta = {m.id: m for m in list_indicators()}
+    hidden_ids = {mid for mid, m in all_meta.items() if m.hidden}
 
     indicators: dict[str, dict] = {}
     for f in INDICATORS_DIR.glob("*.csv"):
@@ -143,13 +144,15 @@ async def get_indicators_data(request: Request):
         if channel in hidden_ids:
             continue
         if channel not in indicators:
+            meta = all_meta.get(channel)
             indicators[channel] = {
                 "id": channel,
-                "text": channel.replace("_", " ").title(),
+                "text": meta.display_name if meta else channel.replace("_", " ").title(),
                 "version": int(m["version"]),
                 "admin_levels": set(),
                 "subgroups": set(),
                 "time": {},
+                "color_theme": meta.color_theme if meta else "RdBu",
             }
         indicators[channel]["subgroups"].add(m["subgroup"])
 

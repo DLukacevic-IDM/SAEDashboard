@@ -84,7 +84,7 @@ const styles = {
 const API_BASE = '/mind';
 
 const IndicatorManager = (props) => {
-  const {classes, closeDrawer} = props;
+  const {classes, closeDrawer, onIndicatorAdded} = props;
   const [activeTab, setActiveTab] = useState(0);
   const [indicators, setIndicators] = useState([]);
   const [expandedIndicator, setExpandedIndicator] = useState(null);
@@ -136,10 +136,28 @@ const IndicatorManager = (props) => {
       const resp = await fetch(`${API_BASE}/upload`, {method: 'POST', body: formData});
       const data = await resp.json();
       setSessionId(data.session_id);
+
+      const cols = data.validation.columns || [];
+      const rows = (data.sample_rows || []).slice(0, 3);
+      const previewCols = cols.slice(0, 6);
+      const hasMore = cols.length > 6;
+      let tableHtml = '';
+      if (rows.length > 0) {
+        tableHtml = '<table style="width:100%;border-collapse:collapse;font-size:0.75rem;margin:8px 0">' +
+          '<tr>' + previewCols.map((c) => `<th style="border:1px solid #ccc;padding:3px 6px;background:#eee;text-align:left">${c}</th>`).join('') + '</tr>' +
+          rows.map((r) => '<tr>' + previewCols.map((c) => `<td style="border:1px solid #ddd;padding:3px 6px">${r[c] != null ? r[c] : ''}</td>`).join('') + '</tr>').join('') +
+          '</table>' + (hasMore ? `<em style="font-size:0.75rem">... and ${cols.length - 6} more columns</em>` : '');
+      }
+
+      const summary = `File received: **${file.name}** (${data.validation.row_count} rows, ${cols.length} columns)` +
+        `\n\nColumns: ${cols.join(', ')}` +
+        (data.validation.sheets ? `\n\nSheets: ${data.validation.sheets.join(', ')}` : '') +
+        (data.validation.issues.length > 0 ? `\n\nIssues: ${data.validation.issues.join(', ')}` : '');
+
       setMessages((prev) => [
         ...prev,
         {role: 'user', content: `Uploaded: ${file.name}`},
-        {role: 'assistant', content: `File received: **${file.name}** (${data.validation.row_count} rows, ${data.validation.columns.length} columns)\n\nColumns: ${data.validation.columns.join(', ')}\n\n${data.validation.sheets ? `Sheets: ${data.validation.sheets.join(', ')}\n\n` : ''}${data.validation.issues.length > 0 ? `Issues: ${data.validation.issues.join(', ')}` : 'No issues detected.'}\n\nPlease describe what this indicator represents and how you would like it visualized.`},
+        {role: 'assistant', content: summary, tableHtml},
       ]);
     } catch (e) {
       setMessages((prev) => [...prev, {role: 'assistant', content: `Error uploading file: ${e.message}`}]);
@@ -198,14 +216,19 @@ const IndicatorManager = (props) => {
     }
 
     let finalText = assistantText;
-    if (files.length > 0) {
-      finalText += '\n\n' + files.map((f) => `![preview](${API_BASE}/files/${f})`).join('\n');
+    const uniqueFiles = [...new Set(files)];
+    if (uniqueFiles.length > 0) {
+      const lastFile = uniqueFiles[uniqueFiles.length - 1];
+      if (!finalText.includes(lastFile)) {
+        finalText += '\n\n' + `![preview](${API_BASE}/files/${lastFile})`;
+      }
     }
     setMessages((prev) => [...prev, {role: 'assistant', content: finalText, form: formData}]);
 
     if (assistantText.toLowerCase().includes('now available in the dashboard') ||
         assistantText.toLowerCase().includes('saved successfully')) {
       fetchIndicators();
+      if (onIndicatorAdded) onIndicatorAdded();
     }
   };
 
@@ -257,6 +280,7 @@ const IndicatorManager = (props) => {
       body: JSON.stringify({hidden: !currentHidden}),
     });
     fetchIndicators();
+    if (onIndicatorAdded) onIndicatorAdded();
   };
 
   const confirmDelete = async () => {
@@ -279,8 +303,10 @@ const IndicatorManager = (props) => {
           <Paper
             elevation={0}
             className={`${classes.chatMessage} ${isUser ? classes.userMessage : classes.assistantMessage}`}
-            dangerouslySetInnerHTML={{__html: content}}
-          />
+          >
+            <span dangerouslySetInnerHTML={{__html: content}} />
+            {msg.tableHtml && <div dangerouslySetInnerHTML={{__html: msg.tableHtml}} />}
+          </Paper>
         </Box>
         {msg.form && !isUser && (
           <ChatFormRenderer
@@ -506,6 +532,7 @@ const IndicatorManager = (props) => {
 IndicatorManager.propTypes = {
   classes: PropTypes.object,
   closeDrawer: PropTypes.func,
+  onIndicatorAdded: PropTypes.func,
 };
 
 export default withStyles(styles)(IndicatorManager);

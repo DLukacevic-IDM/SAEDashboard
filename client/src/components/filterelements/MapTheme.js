@@ -3,6 +3,7 @@ import {MenuItem, Select} from '@mui/material';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import withStyles from '@mui/styles/withStyles';
+import {useSelector} from 'react-redux';
 import config from '../../app_config.json';
 import {DEFAULT_THEME} from '../../const';
 import PropTypes from 'prop-types';
@@ -30,24 +31,28 @@ const scales = [
 const MapTheme = (props) => {
   const {primary, selectedMapTheme, selectedComparisonMapTheme, changeMapTheme,
     changeComparisonMapTheme, classes, indicator} = props;
+  const indicators = useSelector((state) => state.filters.indicators);
+
+  const getThemeForIndicator = (ind) => {
+    if (ind && config && config.defaultThemeByIndicator && config.defaultThemeByIndicator[ind]) {
+      return config.defaultThemeByIndicator[ind];
+    }
+    const indObj = indicators.find((i) => i.id === ind);
+    if (indObj && indObj.color_theme) return indObj.color_theme;
+    return DEFAULT_THEME;
+  };
 
   useEffect(()=> {
     if (!selectedMapTheme) {
-      changeMapTheme(indicator && config &&
-        config.defaultThemeByIndicator && config.defaultThemeByIndicator[indicator] ?
-        config.defaultThemeByIndicator[indicator] : DEFAULT_THEME);
+      changeMapTheme(getThemeForIndicator(indicator));
     }
     if (!selectedComparisonMapTheme) {
-      changeComparisonMapTheme(indicator && config &&
-        config.defaultThemeByIndicator && config.defaultThemeByIndicator[indicator] ?
-        config.defaultThemeByIndicator[indicator] : DEFAULT_THEME);
+      changeComparisonMapTheme(getThemeForIndicator(indicator));
     }
   }, []);
 
   useEffect(() => {
-    changeMapTheme(indicator && config && config.defaultThemeByIndicator &&
-      config.defaultThemeByIndicator[indicator] ?
-      config.defaultThemeByIndicator[indicator] : DEFAULT_THEME);
+    changeMapTheme(getThemeForIndicator(indicator));
   }, [indicator]);
 
   useEffect(() => {

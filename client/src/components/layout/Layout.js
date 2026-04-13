@@ -167,6 +167,10 @@ const Layout = (props) => {
     setIndicatorManagerOpen(false);
   };
 
+  const refreshDashboardIndicators = () => {
+    window.location.reload();
+  };
+
   const messages = translations[selectedLocale]; // get the translations for the locale
 
 
@@ -257,7 +261,7 @@ const Layout = (props) => {
               paper: classes.drawer,
             }}
           >
-            <IndicatorManager closeDrawer={closeIndicatorManager}/>
+            <IndicatorManager closeDrawer={closeIndicatorManager} onIndicatorAdded={refreshDashboardIndicators}/>
           </Drawer>
         </main>
         <Footer />

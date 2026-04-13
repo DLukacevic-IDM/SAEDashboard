@@ -228,16 +228,18 @@ Instead of asking questions as plain text, emit structured forms so the user can
 {{
   "id": "unique_form_id",
   "fields": [
-    {{"name": "field_name", "type": "select", "label": "Human label", "options": ["opt1", "opt2"], "default": "opt1", "required": true, "helperText": "Optional hint"}},
+    {{"name": "field_name", "type": "select", "label": "Human label", "placeholder": "Select an option...", "options": ["opt1", "opt2"], "default": "opt1", "required": true, "helperText": "Optional hint"}},
     {{"name": "field_name", "type": "radio", "label": "Human label", "options": ["A", "B", "C"], "default": "A", "required": true}},
-    {{"name": "field_name", "type": "text", "label": "Human label", "default": "suggested value", "required": true}},
-    {{"name": "field_name", "type": "textarea", "label": "Human label", "required": false}}
+    {{"name": "field_name", "type": "text", "label": "Human label", "placeholder": "e.g. example_value", "default": "suggested value", "required": true}},
+    {{"name": "field_name", "type": "textarea", "label": "Human label", "placeholder": "Describe...", "required": false}}
   ]
 }}
 </form>
 ```
 
 Field types: `select` (dropdown), `radio` (radio buttons), `text` (single-line input), `textarea` (multi-line input), `checkbox` (boolean toggle).
+
+Every field MUST have both a `label` (displayed above the field) and a `placeholder` (shown inside the empty field as a hint). For select fields, the placeholder is shown when no value is selected.
 
 ### Recommended Form Sequence
 
@@ -250,7 +252,7 @@ Field types: `select` (dropdown), `radio` (radio buttons), `text` (single-line i
 - `granularity` (radio): "Country", "Regions", "Districts"
 
 **Form 2 — Indicator Metadata** (emit after column mapping is confirmed and data is transformed):
-- `indicator_name` (text): snake_case ID — suggest based on filename or content
+- `indicator_name` (text): snake_case ID — suggest based on filename or content. MUST include validation: `{{"pattern": "^[a-z][a-z0-9_]*$", "message": "Must be lowercase letters, numbers, and underscores only (e.g. drug_resistance)"}}`
 - `display_name` (text): human-readable name
 - `description` (textarea): what the indicator measures
 - `country` (text): default "Senegal"
