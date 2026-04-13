@@ -50,11 +50,12 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
       case 'select':
         return (
           <FormControl fullWidth size="small" key={field.name} sx={{mb: 1.5}} disabled={disabled}>
-            <InputLabel>{field.label}</InputLabel>
+            <InputLabel shrink>{field.label}</InputLabel>
             <Select
               value={val}
               label={field.label}
               displayEmpty
+              notched
               onChange={(e) => handleChange(field.name, e.target.value)}
               renderValue={(selected) => selected || <span style={{color: '#aaa'}}>{field.placeholder || ''}</span>}
               MenuProps={{sx: {zIndex: 10001}}}
