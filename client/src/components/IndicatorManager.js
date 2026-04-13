@@ -18,6 +18,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SendIcon from '@mui/icons-material/Send';
 import withStyles from '@mui/styles/withStyles';
 import {FormattedMessage} from 'react-intl';
+import ChatFormRenderer from './ChatFormRenderer';
 
 const styles = {
   header: {
@@ -100,6 +101,7 @@ const IndicatorManager = (props) => {
   const [progressMsg, setProgressMsg] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [apiKey, setApiKey] = useState('');
+  const [formSubmitted, setFormSubmitted] = useState({});
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -160,69 +162,85 @@ const IndicatorManager = (props) => {
 
   const handleDragLeave = () => setDragOver(false);
 
-  const sendMessage = async () => {
-    if (!inputText.trim() || !sessionId) return;
-    const msg = inputText.trim();
-    setInputText('');
-    setMessages((prev) => [...prev, {role: 'user', content: msg}]);
+  const processChatResponse = async (resp) => {
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let assistantText = '';
+    let files = [];
+    let formData = null;
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const event = JSON.parse(line.slice(6));
+          if (event.type === 'progress') {
+            setProgress(event.progress);
+            setProgressMsg(event.message);
+          } else if (event.type === 'response') {
+            assistantText = event.text;
+            files = event.files || [];
+            formData = event.form || null;
+          } else if (event.type === 'error') {
+            assistantText = `Error: ${event.message}`;
+          }
+        } catch (parseErr) {
+          // skip malformed SSE
+        }
+      }
+    }
+
+    let finalText = assistantText;
+    if (files.length > 0) {
+      finalText += '\n\n' + files.map((f) => `![preview](${API_BASE}/files/${f})`).join('\n');
+    }
+    setMessages((prev) => [...prev, {role: 'assistant', content: finalText, form: formData}]);
+
+    if (assistantText.toLowerCase().includes('now available in the dashboard') ||
+        assistantText.toLowerCase().includes('saved successfully')) {
+      fetchIndicators();
+    }
+  };
+
+  const sendChatMessage = async (message) => {
     setSending(true);
     setProgress(5);
     setProgressMsg('Thinking...');
-
     try {
       const resp = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({session_id: sessionId, message: msg, api_key: apiKey || null}),
+        body: JSON.stringify({session_id: sessionId, message, api_key: apiKey || null}),
       });
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let assistantText = '';
-      let files = [];
-
-      while (true) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, {stream: true});
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const event = JSON.parse(line.slice(6));
-            if (event.type === 'progress') {
-              setProgress(event.progress);
-              setProgressMsg(event.message);
-            } else if (event.type === 'response') {
-              assistantText = event.text;
-              files = event.files || [];
-            } else if (event.type === 'error') {
-              assistantText = `Error: ${event.message}`;
-            }
-          } catch (parseErr) {
-            // skip malformed SSE
-          }
-        }
-      }
-
-      let finalText = assistantText;
-      if (files.length > 0) {
-        finalText += '\n\n' + files.map((f) => `![preview](${API_BASE}/files/${f})`).join('\n');
-      }
-      setMessages((prev) => [...prev, {role: 'assistant', content: finalText}]);
-
-      if (assistantText.toLowerCase().includes('now available in the dashboard') ||
-          assistantText.toLowerCase().includes('saved successfully')) {
-        fetchIndicators();
-      }
+      await processChatResponse(resp);
     } catch (e) {
       setMessages((prev) => [...prev, {role: 'assistant', content: `Error: ${e.message}`}]);
     }
     setSending(false);
     setProgress(0);
+  };
+
+  const sendMessage = async () => {
+    if (!inputText.trim() || !sessionId) return;
+    const msg = inputText.trim();
+    setInputText('');
+    setMessages((prev) => [...prev, {role: 'user', content: msg}]);
+    await sendChatMessage(msg);
+  };
+
+  const handleFormSubmit = async (formResponse) => {
+    setFormSubmitted((prev) => ({...prev, [formResponse.form_id]: true}));
+    const summary = Object.entries(formResponse.values)
+        .map(([k, v]) => `${k}: ${v}`).join('\n');
+    setMessages((prev) => [...prev, {role: 'user', content: summary}]);
+    await sendChatMessage(formResponse);
   };
 
   const handleKeyPress = (e) => {
@@ -256,12 +274,21 @@ const IndicatorManager = (props) => {
         .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:4px;margin-top:8px"/>')
         .replace(/\n/g, '<br/>');
     return (
-      <Box key={idx} sx={{display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', mb: 1}}>
-        <Paper
-          elevation={0}
-          className={`${classes.chatMessage} ${isUser ? classes.userMessage : classes.assistantMessage}`}
-          dangerouslySetInnerHTML={{__html: content}}
-        />
+      <Box key={idx} sx={{mb: 1}}>
+        <Box sx={{display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start'}}>
+          <Paper
+            elevation={0}
+            className={`${classes.chatMessage} ${isUser ? classes.userMessage : classes.assistantMessage}`}
+            dangerouslySetInnerHTML={{__html: content}}
+          />
+        </Box>
+        {msg.form && !isUser && (
+          <ChatFormRenderer
+            form={msg.form}
+            onSubmit={handleFormSubmit}
+            disabled={sending || !!formSubmitted[msg.form.id]}
+          />
+        )}
       </Box>
     );
   };
@@ -368,7 +395,7 @@ const IndicatorManager = (props) => {
 
       {/* Tab 2: AI Chat */}
       {activeTab === 1 && (
-        <div className={classes.main} style={{display: 'flex', flexDirection: 'column'}}>
+        <div className={classes.main} style={{display: 'flex', flexDirection: 'column', maxWidth: '33vw', minWidth: '400px'}}>
           {/* API Key */}
           <Box sx={{mb: 2, p: 1, backgroundColor: '#fff3cd', borderRadius: 1, border: '1px solid #ffc107'}}>
             <Typography variant="caption" sx={{color: '#856404'}}>Anthropic API Key</Typography>

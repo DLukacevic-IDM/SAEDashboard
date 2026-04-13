@@ -14,6 +14,12 @@ async def chat(request: Request):
     message = data["message"]
     api_key = data.get("api_key")
 
+    if isinstance(message, dict) and message.get("form_id"):
+        formatted = f"[Form submission: {message['form_id']}]\n"
+        for k, v in message.get("values", {}).items():
+            formatted += f"- {k}: {v}\n"
+        message = formatted
+
     gen = run_agent_stream(session_id, message, api_key)
     return StreamingResponse(
         iterate_in_threadpool(gen),

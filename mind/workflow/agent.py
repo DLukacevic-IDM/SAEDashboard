@@ -207,6 +207,58 @@ Senegal regions: Dakar, Diourbel, Fatick, Kaffrine, Kaolack, Kédougou, Kolda, L
 - Upload directory: /data/uploads/{session_id}/
 - Output directory: /data/indicators/
 - Temp directory for plots: /data/tmp/{session_id}/
+
+## Structured Forms
+
+Instead of asking questions as plain text, emit structured forms so the user can select from dropdowns, radio buttons, and text fields. Wrap a JSON form definition in `<form>...</form>` tags within your response text.
+
+### When to Use Forms
+- When collecting information that has known, constrained options (column selection, subgroups, color themes, geographic granularity)
+- When you can batch multiple related questions together
+- Always set smart defaults based on your file analysis (e.g., a column named "estimate" likely maps to `pred`)
+
+### When NOT to Use Forms
+- For open-ended explanations or follow-up questions
+- When asking about edge cases or ambiguous data
+- For error messages or status updates
+
+### Form Schema
+```
+<form>
+{{
+  "id": "unique_form_id",
+  "fields": [
+    {{"name": "field_name", "type": "select", "label": "Human label", "options": ["opt1", "opt2"], "default": "opt1", "required": true, "helperText": "Optional hint"}},
+    {{"name": "field_name", "type": "radio", "label": "Human label", "options": ["A", "B", "C"], "default": "A", "required": true}},
+    {{"name": "field_name", "type": "text", "label": "Human label", "default": "suggested value", "required": true}},
+    {{"name": "field_name", "type": "textarea", "label": "Human label", "required": false}}
+  ]
+}}
+</form>
+```
+
+Field types: `select` (dropdown), `radio` (radio buttons), `text` (single-line input), `textarea` (multi-line input), `checkbox` (boolean toggle).
+
+### Recommended Form Sequence
+
+**Form 1 — Column Mapping** (emit after `validate_upload`):
+- `pred_column` (select): which column is the main indicator value — options from file columns, default to best guess
+- `upper_bound_column` (select): upper bound column — include "None - generate automatically" option
+- `lower_bound_column` (select): lower bound column — include "None - generate automatically" option
+- `geo_column` (select): which column has geographic regions — options from file columns
+- `year_column` (select): which column has years — options from file columns
+- `granularity` (radio): "Country", "Regions", "Districts"
+
+**Form 2 — Indicator Metadata** (emit after column mapping is confirmed and data is transformed):
+- `indicator_name` (text): snake_case ID — suggest based on filename or content
+- `display_name` (text): human-readable name
+- `description` (textarea): what the indicator measures
+- `country` (text): default "Senegal"
+- `subgroup` (select): options ["all", "15-24", "25plus", "Parity-0", "Parity-1plus", "urban", "rural"]
+- `version` (text): default "1"
+- `color_theme` (select): options ["RdBu", "BuRd", "Viridis", "Blues", "Greens", "Reds", "Oranges", "Purples", "GnBu", "YlOrRd", "Spectral"]
+
+You may include additional text before or after the `<form>` block to explain what you found in the data.
 """
 
 
@@ -285,7 +337,15 @@ def run_agent_stream(session_id: str, user_message: str, api_key: str | None = N
 
             if response.stop_reason == "end_turn":
                 text = "".join(b.text for b in response.content if b.type == "text")
-                yield sse({"type": "response", "text": text, "files": list(dict.fromkeys(generated_files))})
+                form_data = None
+                form_match = re.search(r'<form>(.*?)</form>', text, re.DOTALL)
+                if form_match:
+                    try:
+                        form_data = json.loads(form_match.group(1))
+                        text = re.sub(r'<form>.*?</form>', '', text, flags=re.DOTALL).strip()
+                    except json.JSONDecodeError:
+                        pass
+                yield sse({"type": "response", "text": text, "files": list(dict.fromkeys(generated_files)), "form": form_data})
                 break
 
             if response.stop_reason != "tool_use":
