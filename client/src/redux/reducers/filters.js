@@ -161,12 +161,10 @@ export default function(state = initialState, action) {
       return {...state, selectedComparisonSubgroup: action.selectedComparisonSubgroup};
 
     case SET_USER_INDICATORS:
-      // Merge user indicators into the existing indicator list
-      const existingIds = new Set(state.indicators.map((i) => i.id));
-      const newUserIndicators = action.userIndicators
-          .filter((ui) => !existingIds.has(ui.id))
+      const baseIndicators = state.indicators.filter((i) => !i.isUserCreated);
+      const refreshedUserIndicators = action.userIndicators
           .map((ui) => ({...ui, isUserCreated: true}));
-      return {...state, indicators: [...state.indicators, ...newUserIndicators]};
+      return {...state, indicators: [...baseIndicators, ...refreshedUserIndicators]};
 
     default:
       return state;

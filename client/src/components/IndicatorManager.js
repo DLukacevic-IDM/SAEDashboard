@@ -106,6 +106,7 @@ const IndicatorManager = (props) => {
   const [dragOver, setDragOver] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [formSubmitted, setFormSubmitted] = useState({});
+  const [addedToDashboard, setAddedToDashboard] = useState(new Set());
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -229,11 +230,10 @@ const IndicatorManager = (props) => {
         finalText += '\n\n' + `![preview](${API_BASE}/files/${lastFile})`;
       }
     }
-    setMessages((prev) => [...prev, {role: 'assistant', content: finalText, form: formData}]);
+    setMessages((prev) => [...prev, {role: 'assistant', content: finalText, form: formData, showAddButton: indicatorCreated}]);
 
     if (indicatorCreated) {
       fetchIndicators();
-      if (onIndicatorAdded) onIndicatorAdded();
     }
   };
 
@@ -331,6 +331,26 @@ const IndicatorManager = (props) => {
             onSubmit={handleFormSubmit}
             disabled={sending || !!formSubmitted[msg.form.id]}
           />
+        )}
+        {msg.showAddButton && !isUser && (
+          <Box sx={{mt: 1, display: 'flex', justifyContent: 'flex-start'}}>
+            <Button
+              variant="contained"
+              size="small"
+              disabled={addedToDashboard.has(idx)}
+              onClick={() => {
+                setAddedToDashboard((prev) => new Set([...prev, idx]));
+                if (onIndicatorAdded) onIndicatorAdded();
+              }}
+              sx={{
+                textTransform: 'none',
+                backgroundColor: addedToDashboard.has(idx) ? '#4caf50' : '#1976d2',
+                '&:disabled': {backgroundColor: '#4caf50', color: '#fff'},
+              }}
+            >
+              {addedToDashboard.has(idx) ? 'Added to Dashboard' : 'Add to Dashboard'}
+            </Button>
+          </Box>
         )}
       </Box>
     );
