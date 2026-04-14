@@ -191,6 +191,7 @@ const IndicatorManager = (props) => {
     let assistantText = '';
     let files = [];
     let formData = null;
+    let indicatorCreated = false;
 
     while (true) {
       const {done, value} = await reader.read();
@@ -210,6 +211,7 @@ const IndicatorManager = (props) => {
             assistantText = event.text;
             files = event.files || [];
             formData = event.form || null;
+            indicatorCreated = event.indicator_created || false;
           } else if (event.type === 'error') {
             assistantText = `Error: ${event.message}`;
           }
@@ -229,8 +231,7 @@ const IndicatorManager = (props) => {
     }
     setMessages((prev) => [...prev, {role: 'assistant', content: finalText, form: formData}]);
 
-    if (assistantText.toLowerCase().includes('now available in the dashboard') ||
-        assistantText.toLowerCase().includes('saved successfully')) {
+    if (indicatorCreated) {
       fetchIndicators();
       if (onIndicatorAdded) onIndicatorAdded();
     }

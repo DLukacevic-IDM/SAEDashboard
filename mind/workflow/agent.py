@@ -351,6 +351,7 @@ def run_agent_stream(session_id: str, user_message: str, api_key: str | None = N
         sessions[session_id].append({"role": "user", "content": user_message})
 
         generated_files: list[str] = []
+        indicator_created = False
         progress = 5
         model = session_models.get(session_id, MODEL_FAST)
         escalated = model == MODEL_STRONG
@@ -379,7 +380,7 @@ def run_agent_stream(session_id: str, user_message: str, api_key: str | None = N
                         text = re.sub(r'<form>.*?</form>', '', text, flags=re.DOTALL).strip()
                     except json.JSONDecodeError:
                         pass
-                yield sse({"type": "response", "text": text, "files": list(dict.fromkeys(generated_files)), "form": form_data})
+                yield sse({"type": "response", "text": text, "files": list(dict.fromkeys(generated_files)), "form": form_data, "indicator_created": indicator_created})
                 break
 
             if response.stop_reason != "tool_use":
@@ -402,6 +403,7 @@ def run_agent_stream(session_id: str, user_message: str, api_key: str | None = N
                     elif block.name in TOOL_DISPATCH:
                         result_text = TOOL_DISPATCH[block.name](block.input, session_id)
                         if block.name == "finalize_indicator" and "saved successfully" in result_text:
+                            indicator_created = True
                             _save_chat_history(session_id, block.input.get("name", session_id))
                     else:
                         result_text = f"Unknown tool: {block.name}"
