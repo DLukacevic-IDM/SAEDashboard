@@ -158,6 +158,11 @@ TOOLS = [
                     "description": "Optional mapping from raw column values to sanitized subgroup names (e.g. {'Age 15-24': '15-24'})",
                 },
                 "include_all": {"type": "boolean", "description": "Also create an 'all' subgroup from the full dataset (default true)"},
+                "all_aggregation": {"type": "string", "enum": ["mean", "median", "sum"], "description": "How to aggregate values across subgroups for the 'all' file (default 'mean')"},
+                "all_group_columns": {
+                    "type": "array", "items": {"type": "string"},
+                    "description": "Columns to group by when building the 'all' subgroup (e.g. ['state', 'year']). If omitted, auto-detected.",
+                },
             },
             "required": ["name", "display_name", "description", "country", "version", "subgroup_column"],
         },
@@ -308,6 +313,8 @@ Data-specific fields (add when relevant):
 If a `subgroup_column` was selected in Form 1:
 - Show a read-only text field listing the detected subgroup values (e.g., "DHFR-IRN, crt-CVIET, MDR-NFD, ...")
 - `include_all` (checkbox): "Also create an 'all' subgroup from the full dataset" — default checked
+- `all_aggregation` (radio): "mean", "median", "sum" — how to aggregate values across subgroups for the 'all' file. Default "mean". For percentage data, "mean" is almost always correct.
+- `all_group_columns` (text): comma-separated column names to group by when building the 'all' subgroup. Pre-fill with the columns that should be kept as dimensions (e.g., "state, year"). The remaining numeric columns will be aggregated.
 - Do NOT include a single `subgroup` select field
 
 If NO `subgroup_column` was selected:

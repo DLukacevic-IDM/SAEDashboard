@@ -54,6 +54,12 @@ def preview_data(session_id: str) -> str:
 
 
 def transform_csv(session_id: str, transformations: dict) -> str:
+    if isinstance(transformations, str):
+        import json as _json
+        try:
+            transformations = _json.loads(transformations)
+        except _json.JSONDecodeError:
+            return f"ERROR: transformations must be a JSON object, got string: {transformations[:200]}"
     if session_id not in uploads_cache:
         return "ERROR: No data loaded. Call validate_upload first."
     df = uploads_cache[session_id].copy()
@@ -229,7 +235,18 @@ def batch_finalize_indicator(
     subgroup_column: str,
     subgroup_mapping: dict | None = None,
     include_all: bool = True,
+    all_aggregation: str = "mean",
+    all_group_columns: list[str] | None = None,
 ) -> str:
+    if isinstance(all_group_columns, str):
+        all_group_columns = [c.strip() for c in all_group_columns.split(",") if c.strip()]
+    if isinstance(subgroup_mapping, str):
+        import json as _json
+        try:
+            subgroup_mapping = _json.loads(subgroup_mapping)
+        except (ValueError, _json.JSONDecodeError):
+            subgroup_mapping = None
+
     if session_id not in uploads_cache:
         return "ERROR: No data loaded. Call validate_upload and transform_csv first."
 
@@ -257,9 +274,24 @@ def batch_finalize_indicator(
     if include_all:
         tasks.append((None, "all"))
 
+    force_group = {"state", "year", "month", "dot_name"}
+
     for raw_value, sg_name in tasks:
         if raw_value is None:
             subset = df.drop(columns=[subgroup_column])
+            if all_group_columns:
+                group_cols = [c for c in all_group_columns if c in subset.columns]
+            else:
+                num_cols_set = set(subset.select_dtypes(include="number").columns)
+                group_cols = [c for c in subset.columns
+                              if c not in num_cols_set or c.lower() in force_group]
+            num_cols = [c for c in subset.columns
+                        if c not in group_cols and pd.api.types.is_numeric_dtype(subset[c])]
+            if not group_cols or not num_cols:
+                warnings.append("  - all: skipped (cannot determine group/value columns)")
+                continue
+            agg_func = all_aggregation if all_aggregation in ("mean", "median", "sum") else "mean"
+            subset = subset.groupby(group_cols, as_index=False)[num_cols].agg(agg_func)
         else:
             subset = df[df[subgroup_column] == raw_value].drop(columns=[subgroup_column])
 
@@ -480,5 +512,7 @@ TOOL_DISPATCH = {
         inp["country"], inp["version"], inp.get("color_theme", "RdBu"),
         inp.get("shape_version", "1"), inp["subgroup_column"],
         inp.get("subgroup_mapping"), inp.get("include_all", True),
+        inp.get("all_aggregation", "mean"),
+        inp.get("all_group_columns"),
     ),
 }
