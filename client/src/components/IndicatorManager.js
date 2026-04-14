@@ -222,15 +222,7 @@ const IndicatorManager = (props) => {
       }
     }
 
-    let finalText = assistantText;
-    const uniqueFiles = [...new Set(files)];
-    if (uniqueFiles.length > 0) {
-      const lastFile = uniqueFiles[uniqueFiles.length - 1];
-      if (!finalText.includes(lastFile)) {
-        finalText += '\n\n' + `![preview](${API_BASE}/files/${lastFile})`;
-      }
-    }
-    setMessages((prev) => [...prev, {role: 'assistant', content: finalText, form: formData, showAddButton: indicatorCreated}]);
+    setMessages((prev) => [...prev, {role: 'assistant', content: assistantText, form: formData, showAddButton: indicatorCreated}]);
 
     if (indicatorCreated) {
       fetchIndicators();
