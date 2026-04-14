@@ -45,19 +45,27 @@ cd client && npx eslint src/
 
 ```
 client/ (React 18, Redux, MUI, Leaflet, AmCharts)
-  ├── src/components/    UI components + LLMClient
+  ├── src/components/    UI components + LLMClient + IndicatorManager + ChatFormRenderer
   ├── src/views/         Page views (dashboard, welcome, about)
   ├── src/redux/         Store, actions, reducers
-  └── setupProxy.js      /api → service:5000, /llm → llm:5001
+  └── setupProxy.js      /api → service:5000, /llm → llm:5001, /mind → mind:5020
 
 service/ (FastAPI, Python 3.9+, Uvicorn :5000)
   ├── app.py             Entry point, mounts routers
-  ├── controllers/       API endpoints (map, indicators, timeseries, shapes, events, etc.)
+  ├── controllers/       API endpoints (map, indicators, timeseries, shapes, events, register, etc.)
   ├── schemas/           Pydantic models
   ├── helpers/           Data access utilities
   ├── data/              CSV data files (Senegal__*__*.csv), shapefiles, layer_data.json
   ├── mcp_server.py      FastMCP server (SSE on :5010)
   └── tests/             pytest (config in tests/controllers/pytest.ini)
+
+mind/ (FastAPI :5020, Anthropic Claude)
+  ├── app.py             Entry point
+  ├── workflow/agent.py  Agentic loop: Claude + tool use, SSE progress
+  ├── workflow/tools.py  Tool implementations (validate, transform, finalize, batch_finalize)
+  ├── workflow/csv_validator.py  File loading, output validation
+  ├── storage/           JSON-backed indicator metadata CRUD
+  └── controllers/       Upload, chat (SSE), indicator CRUD, data serving
 
 LLM/ (FastAPI :5001, LangChain, Google Agent SDK)
   ├── app.py             Entry point
@@ -71,8 +79,10 @@ LLM/ (FastAPI :5001, LangChain, Google Agent SDK)
 
 - Frontend proxies `/api/*` → service:5000 (REST: indicators, timeseries, shapes, events)
 - Frontend proxies `/llm/*` → LLM:5001 (AI-powered data queries)
+- Frontend proxies `/mind/*` → mind:5020 (AI-powered indicator onboarding)
 - LLM service connects to MCP server (SSE at :5010) for structured data access
 - Backend reads CSV files from `service/data/data/` and shapefiles from `service/data/shapefiles/`
+- Mind service writes indicator CSVs to `/data/indicators/` and registers them with the service via `POST /indicators/register`
 
 ## Key Config Files
 
@@ -117,6 +127,11 @@ GET /events                       → timeline events
 GET /layer_data                   → overlay layer JSON
 GET /africa_map                   → continental GeoJSON
 POST /llm/run {prompt, api_key?, model_name?}      → AI query response
+POST /indicators/register (file: CSV)              → register new indicator file
+POST /indicators/deregister {indicator_id}         → remove indicator files
+POST /mind/upload (file)                           → upload CSV/Excel for onboarding
+POST /mind/chat {session_id, message}              → SSE stream (AI agent)
+GET  /mind/indicators                              → list user-created indicators
 ```
 
 ## MCP Tools (service/mcp_server.py)

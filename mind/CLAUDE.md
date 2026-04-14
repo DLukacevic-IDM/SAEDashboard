@@ -35,6 +35,8 @@ controllers/
 workflow/
   agent.py      Agentic loop: Claude + tool use, max 25 iterations, SSE progress
   tools.py      Tool implementations + TOOL_DISPATCH registry
+                (validate_upload, preview_data, transform_csv, detect_shape_version,
+                 finalize_indicator, batch_finalize_indicator, execute_python)
   csv_validator.py  File loading, output validation, dot_name regex
 storage/
   metadata_store.py  JSON-backed CRUD for IndicatorMetadata (Pydantic model)
@@ -44,11 +46,13 @@ storage/
 
 **Agentic loop** (`workflow/agent.py`): Each `/chat` request runs a synchronous Claude loop — send messages → if `stop_reason == "tool_use"`, execute tools via `TOOL_DISPATCH`, append results, repeat. Streams SSE progress events. `_repair_session()` strips dangling tool_use blocks from history.
 
-**Session state**: In-memory dict `sessions[session_id] → list[message]` for conversation history. `uploads_cache[session_id] → DataFrame` for data being transformed. Both are lost on restart.
+**Session state**: In-memory dict `sessions[session_id] → list[message]` for conversation history. `uploads_cache[session_id] → DataFrame` for data being transformed. `uploads_cache_original[session_id] → DataFrame` preserves the pre-transform data for batch subgroup splitting. Both are lost on restart.
 
 **Tool dispatch**: `TOOL_DISPATCH` dict in `tools.py` maps tool name → lambda(input, session_id). `execute_python` is handled separately in the agent loop (returns files list). Python execution runs in subprocess with 120s timeout.
 
-**Data flow**: Upload → `validate_upload` → `transform_csv` (iterative) → `finalize_indicator` → writes CSV to `/data/indicators/` + metadata to `/data/indicator_metadata.json`. The `data.py` controller then serves this data via `/map` and `/timeseries` endpoints.
+**Data flow**: Upload → `validate_upload` → `transform_csv` (iterative) → `finalize_indicator` or `batch_finalize_indicator` → writes CSV(s) to `/data/indicators/` + metadata to `/data/indicator_metadata.json` → registers with service via `POST /indicators/register`. The `data.py` controller then serves this data via `/map` and `/timeseries` endpoints.
+
+**Multi-subgroup indicators**: `batch_finalize_indicator` splits a single DataFrame by a subgroup column, producing one CSV per unique value plus an optional "all" aggregate. The "all" subgroup is computed by grouping on dimension columns (state, year, etc.) and aggregating numeric columns (default: mean). Parameters `all_group_columns` and `all_aggregation` control this behavior. `_align_reference_columns` renames `{indicator}` / `se.{indicator}` columns to match the indicator name in the filename.
 
 **Column rename on read** (`controllers/data.py:_load_indicator`): `state→dot_name`, `pred→data`, `pred_upper→data_upper_bound`, `pred_lower→data_lower_bound`, `{indicator}→reference`, `se.{indicator}→reference_stderr` (then computes CI bounds from stderr).
 

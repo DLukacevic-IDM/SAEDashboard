@@ -1,6 +1,6 @@
 SAE Dashboard
 ===============
-This repository contains a map-based dashboard that displays subnational model results. Users can configure it to show different kinds of model data. The sample data provided shows family planning model output in Senegal.
+This repository contains a map-based dashboard that displays subnational model results. Users can configure it to show different kinds of model data. The sample data provided shows family planning model output in Senegal. Includes an AI-powered indicator onboarding service that lets users upload and register new indicators via a guided chat workflow.
 
 
 Disclaimer
@@ -25,7 +25,15 @@ countries is covered by a a different license Austria: Creative Commons
 Attribution-ShareAlike 2.0 (source: Government of Ausria)
 ```
 
-Prerequisies
+Services
+------------
+- **Client** (React, :8080) — Map-based dashboard UI with dual choropleths, time-series charts, and filtering
+- **Service** (FastAPI, :5000) — REST API serving indicators, timeseries, shapes, and events from CSV data
+- **Mind** (FastAPI, :5020) — AI-powered indicator onboarding via Claude chat (upload CSV → validate → transform → register)
+- **MCP** (FastMCP, :5010) — Structured data access for the LLM service via DuckDB
+- **LLM** (FastAPI, :5001) — AI-powered data queries using LangChain and RAG
+
+Prerequisites
 ------------
 To run this project using Docker, you will need the following software:
 - [Docker desktop](https://www.docker.com/products/docker-desktop/)
@@ -61,4 +69,5 @@ Documentation
 - [Architecture & Design](docs/architecture.md) — Tech stack, services, API endpoints, deployment
 - [Data Workflows](docs/data-workflows.md) — Data pipelines, request processing, LLM query routing
 
+An `ANTHROPIC_API_KEY` environment variable is required for the mind service (AI indicator onboarding).
 
