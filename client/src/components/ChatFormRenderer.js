@@ -49,7 +49,7 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
     switch (field.type) {
       case 'select':
         return (
-          <FormControl fullWidth size="small" key={field.name} sx={{mb: 1.5}} disabled={disabled}>
+          <FormControl fullWidth size="small" key={field.name} sx={{mb: 1.5}} disabled={disabled} title={field.label}>
             <InputLabel shrink>{field.label}</InputLabel>
             <Select
               value={val}
@@ -69,7 +69,7 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
         );
       case 'radio':
         return (
-          <FormControl key={field.name} sx={{mb: 1.5}} disabled={disabled}>
+          <FormControl key={field.name} sx={{mb: 1.5}} disabled={disabled} title={field.label}>
             <FormLabel sx={{fontSize: '0.85rem'}}>{field.label}</FormLabel>
             <RadioGroup
               value={val}
@@ -90,6 +90,7 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
             fullWidth size="small"
             multiline minRows={2} maxRows={4}
             label={field.label}
+            title={field.label}
             placeholder={field.placeholder}
             value={val}
             onChange={(e) => handleChange(field.name, e.target.value)}
@@ -103,6 +104,7 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
         return (
           <FormControlLabel
             key={field.name}
+            title={field.label}
             control={
               <Checkbox
                 size="small"
@@ -121,6 +123,7 @@ const ChatFormRenderer = ({form, onSubmit, disabled}) => {
             key={field.name}
             fullWidth size="small"
             label={field.label}
+            title={field.label}
             placeholder={field.placeholder}
             value={val}
             onChange={(e) => handleChange(field.name, e.target.value)}
