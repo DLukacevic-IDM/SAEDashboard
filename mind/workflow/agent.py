@@ -135,6 +135,34 @@ TOOLS = [
         },
     },
     {
+        "name": "batch_finalize_indicator",
+        "description": (
+            "Finalize an indicator with MULTIPLE subgroups from a single transformed dataset. "
+            "Splits the data by a subgroup column and creates one CSV file per unique value. "
+            "Optionally also creates an 'all' subgroup from the full unfiltered data. "
+            "Use this instead of finalize_indicator when the data contains a subgroup column."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Indicator ID (snake_case, e.g. 'drug_resistance')"},
+                "display_name": {"type": "string", "description": "Human-readable name"},
+                "description": {"type": "string", "description": "What this indicator measures"},
+                "country": {"type": "string", "description": "Country name (e.g. 'Senegal')"},
+                "version": {"type": "string", "description": "Version number (e.g. '1')"},
+                "color_theme": {"type": "string", "description": "Color palette for map (e.g. 'RdBu', 'Viridis')"},
+                "shape_version": {"type": "string", "description": "Map boundary version from detect_shape_version (e.g. '1')"},
+                "subgroup_column": {"type": "string", "description": "Column name containing subgroup values to split by"},
+                "subgroup_mapping": {
+                    "type": "object",
+                    "description": "Optional mapping from raw column values to sanitized subgroup names (e.g. {'Age 15-24': '15-24'})",
+                },
+                "include_all": {"type": "boolean", "description": "Also create an 'all' subgroup from the full dataset (default true)"},
+            },
+            "required": ["name", "display_name", "description", "country", "version", "subgroup_column"],
+        },
+    },
+    {
         "name": "execute_python",
         "description": (
             "Execute Python code for data analysis and visualization. "
@@ -178,6 +206,11 @@ Example: `Senegal__modern_method__all__1.csv`
 | `pred_upper` | Upper bound (95% CI) |
 | `pred_lower` | Lower bound (95% CI) |
 
+### Multi-Subgroup Indicators
+An indicator can have multiple subgroups. Each subgroup gets its own CSV file with the same columns but different data.
+Example: `Senegal__drug_resistance__DHFR-IRN__1.csv`, `Senegal__drug_resistance__crt-CVIET__1.csv`, plus an optional `Senegal__drug_resistance__all__1.csv` for the full dataset.
+When the uploaded data has a column that distinguishes subgroups (e.g., marker type, age group, residence), use `batch_finalize_indicator` to split it into per-subgroup CSV files automatically.
+
 ### Dot Name Format
 Colon-separated hierarchical identifiers:
 - `Africa:Senegal` (country level)
@@ -206,9 +239,9 @@ When the user submits the form:
 
 ### Step 4: User submits Form 2
 When the user submits the metadata form:
-1. Call `finalize_indicator` with the submitted values
+1. If the user selected a subgroup column in Form 1, call `batch_finalize_indicator` with the `subgroup_column` and any `subgroup_mapping`. Otherwise call `finalize_indicator` with the submitted values.
 2. Generate a preview visualization with `execute_python`
-3. Respond with a short what-was-done summary (indicator name, row count, regions, year range)
+3. Respond with a short what-was-done summary (indicator name, subgroups created, row count, regions, year range)
 
 ## CRITICAL RULES
 - **NEVER ask questions as plain text.** Always use a `<form>` block. The only plain text you should write is short summaries of what you found or did.
@@ -261,7 +294,7 @@ Required fields:
 Data-specific fields (add when relevant):
 - If data has multiple categories that could be filtered (e.g., drugs, markers, types): add a select field for each with all unique values plus "All" option
 - If data needs aggregation from a finer level to a coarser level: add a radio field for aggregation method (e.g., "Weighted average", "Simple average", "Sum")
-- If data has subgroup columns: add a select field for which subgroup to use
+- If data has a column whose values represent different subgroups/categories that should be displayed separately in the dashboard (e.g., drug markers, age groups, residence type): add a `subgroup_column` (select) field listing candidate columns plus "None - single subgroup only" as the first option. Do NOT drop this column during transformation — `batch_finalize_indicator` needs it.
 
 ### Form 2 — Indicator Metadata (emit in Step 3, after transformation)
 
@@ -269,9 +302,16 @@ Data-specific fields (add when relevant):
 - `display_name` (text): human-readable name — suggest based on user's description
 - `description` (textarea): what the indicator measures — pre-fill with a sensible default
 - `country` (text): default "Senegal"
-- `subgroup` (select): options — include "all" plus any subgroups identified in the data, default "all"
 - `version` (text): default "1"
 - `color_theme` (select): options ["RdBu", "BuRd", "Viridis", "Blues", "Greens", "Reds", "Oranges", "Purples", "GnBu", "YlOrRd", "Spectral"], default "Viridis"
+
+If a `subgroup_column` was selected in Form 1:
+- Show a read-only text field listing the detected subgroup values (e.g., "DHFR-IRN, crt-CVIET, MDR-NFD, ...")
+- `include_all` (checkbox): "Also create an 'all' subgroup from the full dataset" — default checked
+- Do NOT include a single `subgroup` select field
+
+If NO `subgroup_column` was selected:
+- `subgroup` (select): options — include "all" plus any subgroups identified in the data, default "all"
 """
 
 
@@ -303,6 +343,7 @@ def _progress_msg(tool_name: str, tool_input: dict) -> str:
         "list_existing_indicators": "Checking existing indicators...",
         "detect_shape_version": "Detecting map boundary version...",
         "finalize_indicator": "Finalizing indicator...",
+        "batch_finalize_indicator": "Creating indicator with multiple subgroups...",
         "execute_python": tool_input.get("description", "Running analysis...")[:80],
     }
     return msgs.get(tool_name, f"Using {tool_name}...")
@@ -410,7 +451,7 @@ def run_agent_stream(session_id: str, user_message: str, api_key: str | None = N
                         result_text = "\n".join(filter(None, [out, file_notes])).strip()
                     elif block.name in TOOL_DISPATCH:
                         result_text = TOOL_DISPATCH[block.name](block.input, session_id)
-                        if block.name == "finalize_indicator" and FINALIZE_SUCCESS_SENTINEL in result_text:
+                        if block.name in ("finalize_indicator", "batch_finalize_indicator") and FINALIZE_SUCCESS_SENTINEL in result_text:
                             indicator_created = True
                             _save_chat_history(session_id, block.input.get("name", session_id))
                     else:

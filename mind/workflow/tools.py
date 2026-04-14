@@ -21,6 +21,7 @@ TMP_DIR = Path("/data/tmp")
 SHAPES_DIR = Path(os.getenv("SHAPES_DIR", "/data/shapefiles"))
 
 uploads_cache: dict[str, pd.DataFrame] = {}
+uploads_cache_original: dict[str, pd.DataFrame] = {}
 
 
 def validate_upload(session_id: str, sheet_name: str | None = None) -> str:
@@ -33,6 +34,7 @@ def validate_upload(session_id: str, sheet_name: str | None = None) -> str:
     try:
         df, info = load_upload(path, sheet_name)
         uploads_cache[session_id] = df
+        uploads_cache_original[session_id] = df.copy()
     except Exception as e:
         return f"ERROR: Failed to read file: {e}"
 
@@ -190,6 +192,125 @@ def finalize_indicator(
 
 
 
+def _sanitize_subgroup_name(value: str) -> str:
+    s = str(value).strip()
+    s = re.sub(r'[\s]+', '-', s)
+    s = re.sub(r'[^A-Za-z0-9\-_]', '_', s)
+    s = re.sub(r'_+', '_', s).strip('_')
+    return s or "unknown"
+
+
+def batch_finalize_indicator(
+    session_id: str,
+    name: str,
+    display_name: str,
+    description: str,
+    country: str,
+    version: str,
+    color_theme: str,
+    shape_version: str,
+    subgroup_column: str,
+    subgroup_mapping: dict | None = None,
+    include_all: bool = True,
+) -> str:
+    if session_id not in uploads_cache:
+        return "ERROR: No data loaded. Call validate_upload and transform_csv first."
+
+    df = uploads_cache[session_id]
+
+    if subgroup_column not in df.columns:
+        if session_id in uploads_cache_original and subgroup_column in uploads_cache_original[session_id].columns:
+            df[subgroup_column] = uploads_cache_original[session_id][subgroup_column]
+        else:
+            return f"ERROR: Column '{subgroup_column}' not found in data."
+
+    unique_values = df[subgroup_column].dropna().unique().tolist()
+    if len(unique_values) > 20:
+        return f"ERROR: Too many subgroups ({len(unique_values)}). Maximum is 20."
+    if not unique_values:
+        return "ERROR: Subgroup column has no values."
+
+    INDICATORS_DIR.mkdir(parents=True, exist_ok=True)
+    mapping = subgroup_mapping or {}
+    created = []
+    warnings = []
+    all_filenames = []
+
+    tasks = [(v, mapping.get(str(v), _sanitize_subgroup_name(v))) for v in unique_values]
+    if include_all:
+        tasks.append((None, "all"))
+
+    for raw_value, sg_name in tasks:
+        if raw_value is None:
+            subset = df.drop(columns=[subgroup_column])
+        else:
+            subset = df[df[subgroup_column] == raw_value].drop(columns=[subgroup_column])
+
+        if subset.empty:
+            warnings.append(f"  - {sg_name}: skipped (no rows)")
+            continue
+
+        filename = f"{country}__{name}__{sg_name}__{version}.csv"
+        output_path = INDICATORS_DIR / filename
+        subset.to_csv(output_path, index=False)
+
+        issues = validate_output_csv(output_path)
+        if issues:
+            output_path.unlink()
+            warnings.append(f"  - {sg_name}: validation failed — {'; '.join(issues)}")
+            continue
+
+        all_filenames.append(filename)
+        created.append(sg_name)
+
+        import httpx
+        service_url = os.getenv("SERVICE_URL", "http://service:5000")
+        try:
+            with open(output_path, "rb") as f:
+                httpx.post(
+                    f"{service_url}/indicators/register",
+                    files={"file": (filename, f, "text/csv")},
+                    timeout=30.0,
+                )
+        except Exception:
+            pass
+
+    if not created:
+        return "ERROR: No subgroups were created successfully.\n" + "\n".join(warnings)
+
+    meta = IndicatorMetadata(
+        id=name,
+        display_name=display_name,
+        description=description,
+        country=country,
+        subgroups=created,
+        version=version,
+        color_theme=color_theme,
+        shape_version=shape_version,
+        csv_files=all_filenames,
+        onboarding_notes=f"Batch onboarded via AI chat in session {session_id}",
+    )
+
+    existing = list_all_indicators()
+    existing_meta = next((i for i in existing if i.id == name), None)
+    if existing_meta:
+        meta.subgroups = list(set(existing_meta.subgroups + created))
+        meta.csv_files = list(set(existing_meta.csv_files + all_filenames))
+        meta.created_at = existing_meta.created_at
+
+    save_indicator(meta)
+
+    summary = (
+        f"Indicator '{display_name}' {FINALIZE_SUCCESS_SENTINEL}.\n"
+        f"Created {len(created)} subgroup(s): {', '.join(created)}\n"
+        f"Color theme: {color_theme}\n"
+    )
+    if warnings:
+        summary += "Warnings:\n" + "\n".join(warnings) + "\n"
+    summary += "The indicator is now available in the dashboard."
+    return summary
+
+
 def _sanitize_python_output(out: str) -> str:
     lines = out.splitlines()
     kept = []
@@ -335,5 +456,11 @@ TOOL_DISPATCH = {
         sid, inp["name"], inp["display_name"], inp["description"],
         inp["country"], inp["subgroup"], inp["version"], inp.get("color_theme", "RdBu"),
         inp.get("shape_version", "1"),
+    ),
+    "batch_finalize_indicator": lambda inp, sid: batch_finalize_indicator(
+        sid, inp["name"], inp["display_name"], inp["description"],
+        inp["country"], inp["version"], inp.get("color_theme", "RdBu"),
+        inp.get("shape_version", "1"), inp["subgroup_column"],
+        inp.get("subgroup_mapping"), inp.get("include_all", True),
     ),
 }
