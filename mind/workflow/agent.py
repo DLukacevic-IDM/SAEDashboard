@@ -303,6 +303,32 @@ def _progress_msg(tool_name: str, tool_input: dict) -> str:
     return msgs.get(tool_name, f"Using {tool_name}...")
 
 
+CHATS_DIR = Path("/data/chats")
+
+
+def _save_chat_history(session_id: str, indicator_id: str):
+    history = sessions.get(session_id, [])
+    clean = []
+    for msg in history:
+        if msg["role"] == "user":
+            content = msg["content"]
+            if isinstance(content, str):
+                clean.append({"role": "user", "content": content})
+        elif msg["role"] == "assistant":
+            content = msg["content"]
+            if isinstance(content, str):
+                clean.append({"role": "assistant", "content": content})
+            elif isinstance(content, list):
+                texts = [b["text"] for b in content if b.get("type") == "text" and b.get("text", "").strip()]
+                if texts:
+                    combined = "\n\n".join(texts)
+                    combined = re.sub(r'<form>.*?</form>', '', combined, flags=re.DOTALL).strip()
+                    if combined:
+                        clean.append({"role": "assistant", "content": combined})
+    CHATS_DIR.mkdir(parents=True, exist_ok=True)
+    (CHATS_DIR / f"{indicator_id}.json").write_text(json.dumps(clean, indent=2))
+
+
 def run_agent_stream(session_id: str, user_message: str, api_key: str | None = None):
     def sse(event: dict) -> str:
         return f"data: {json.dumps(event)}\n\n"
@@ -375,6 +401,8 @@ def run_agent_stream(session_id: str, user_message: str, api_key: str | None = N
                         result_text = "\n".join(filter(None, [out, file_notes])).strip()
                     elif block.name in TOOL_DISPATCH:
                         result_text = TOOL_DISPATCH[block.name](block.input, session_id)
+                        if block.name == "finalize_indicator" and "saved successfully" in result_text:
+                            _save_chat_history(session_id, block.input.get("name", session_id))
                     else:
                         result_text = f"Unknown tool: {block.name}"
 

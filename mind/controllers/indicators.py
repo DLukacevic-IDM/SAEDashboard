@@ -1,3 +1,4 @@
+import json
 import os
 import re
 from pathlib import Path
@@ -12,6 +13,7 @@ from storage.metadata_store import (
 
 router = APIRouter()
 INDICATORS_DIR = Path("/data/indicators")
+CHATS_DIR = Path("/data/chats")
 SERVICE_URL = os.getenv("SERVICE_URL", "http://service:5000")
 DATA_FILE_REGEX = re.compile(r'^(?P<country>.+)__(?P<channel>.+)__(?P<subgroup>.+)__(?P<version>.+)\.csv$')
 
@@ -127,6 +129,14 @@ async def patch_indicator(indicator_id: str, body: dict):
             pass
 
     return {"ok": True, "hidden": updated.hidden}
+
+
+@router.get("/indicators/{indicator_id}/chat")
+async def get_indicator_chat(indicator_id: str):
+    chat_file = CHATS_DIR / f"{indicator_id}.json"
+    if not chat_file.exists():
+        return {"messages": []}
+    return {"messages": json.loads(chat_file.read_text())}
 
 
 @router.delete("/indicators/{indicator_id}")

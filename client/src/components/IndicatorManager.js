@@ -19,6 +19,8 @@ import SendIcon from '@mui/icons-material/Send';
 import withStyles from '@mui/styles/withStyles';
 import {FormattedMessage} from 'react-intl';
 import ChatFormRenderer from './ChatFormRenderer';
+import ChatHistoryDialog from './ChatHistoryDialog';
+import HistoryIcon from '@mui/icons-material/History';
 
 const styles = {
   header: {
@@ -91,6 +93,8 @@ const IndicatorManager = (props) => {
   const [deleteDialog, setDeleteDialog] = useState(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [loadingIndicators, setLoadingIndicators] = useState(false);
+  const [chatHistoryDialog, setChatHistoryDialog] = useState(null);
+  const [chatHistoryMessages, setChatHistoryMessages] = useState([]);
 
   // Chat state
   const [sessionId, setSessionId] = useState(null);
@@ -283,6 +287,18 @@ const IndicatorManager = (props) => {
     if (onIndicatorAdded) onIndicatorAdded();
   };
 
+  const openChatHistory = async (ind) => {
+    setChatHistoryDialog(ind);
+    setChatHistoryMessages([]);
+    try {
+      const resp = await fetch(`${API_BASE}/indicators/${ind.id}/chat`);
+      const data = await resp.json();
+      setChatHistoryMessages(data.messages || []);
+    } catch (e) {
+      setChatHistoryMessages([]);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteDialog || deleteConfirmText !== deleteDialog.id) return;
     await fetch(`${API_BASE}/indicators/${deleteDialog.id}`, {method: 'DELETE'});
@@ -391,7 +407,15 @@ const IndicatorManager = (props) => {
                       </Typography>
                     )}
                     {ind.is_user_created && (
-                      <Box sx={{mt: 1, display: 'flex', alignItems: 'center', gap: 1}}>
+                      <Box sx={{mt: 1, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap'}}>
+                        <Button
+                          size="small"
+                          startIcon={<HistoryIcon />}
+                          onClick={() => openChatHistory(ind)}
+                          variant="outlined"
+                        >
+                          Chat History
+                        </Button>
                         <Button
                           size="small"
                           startIcon={ind.hidden ? <VisibilityIcon /> : <VisibilityOffIcon />}
@@ -496,6 +520,13 @@ const IndicatorManager = (props) => {
           )}
         </div>
       )}
+
+      <ChatHistoryDialog
+        open={!!chatHistoryDialog}
+        onClose={() => setChatHistoryDialog(null)}
+        messages={chatHistoryMessages}
+        indicatorName={chatHistoryDialog?.display_name}
+      />
 
       {/* Delete confirmation dialog */}
       <Dialog open={!!deleteDialog} onClose={() => setDeleteDialog(null)}>
