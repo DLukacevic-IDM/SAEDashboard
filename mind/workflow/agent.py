@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import time
@@ -6,7 +7,10 @@ from pathlib import Path
 
 import anthropic
 
+from workflow.constants import FINALIZE_SUCCESS_SENTINEL, MULTI_SHEET_SENTINEL, FILE_SAVED_PREFIX
 from workflow.tools import TOOL_DISPATCH, execute_python
+
+logger = logging.getLogger(__name__)
 
 MODEL_FAST = os.getenv("ANTHROPIC_MODEL_FAST", "claude-opus-4-6") #"claude-sonnet-4-6")
 MODEL_STRONG = os.getenv("ANTHROPIC_MODEL_STRONG", "claude-opus-4-6")
@@ -20,7 +24,7 @@ session_models: dict[str, str] = {}
 def _complexity_score(tool_output: str, user_message: str) -> int:
     score = 0
 
-    if "Multiple sheets found" in tool_output:
+    if MULTI_SHEET_SENTINEL in tool_output:
         score += 2
     col_match = re.search(r"(\d+) columns", tool_output)
     if col_match:
@@ -134,7 +138,7 @@ TOOLS = [
         "description": (
             "Execute Python code for data analysis and visualization. "
             "pandas, matplotlib (Agg auto-set), numpy available. "
-            "Print FILE_SAVED:/path for each output file. "
+            f"Print {FILE_SAVED_PREFIX}/path for each output file. "
             "The uploaded data is available at /data/uploads/{session_id}/. "
             "Finalized indicators are at /data/indicators/."
         ),
@@ -375,11 +379,14 @@ def run_agent_stream(session_id: str, user_message: str, api_key: str | None = N
                 form_data = None
                 form_match = re.search(r'<form>(.*?)</form>', text, re.DOTALL)
                 if form_match:
+                    raw_json = form_match.group(1).strip()
                     try:
-                        form_data = json.loads(form_match.group(1))
+                        form_data = json.loads(raw_json)
                         text = re.sub(r'<form>.*?</form>', '', text, flags=re.DOTALL).strip()
-                    except json.JSONDecodeError:
-                        pass
+                    except json.JSONDecodeError as exc:
+                        logger.warning("Form JSON parse failed in session %s: %s — raw: %.200s", session_id, exc, raw_json)
+                        text = re.sub(r'<form>.*?</form>', '', text, flags=re.DOTALL).strip()
+                        text += "\n\n(Warning: A form was generated but could not be parsed. Please describe your preferences in text.)"
                 yield sse({"type": "response", "text": text, "files": list(dict.fromkeys(generated_files)), "form": form_data, "indicator_created": indicator_created})
                 break
 
@@ -402,7 +409,7 @@ def run_agent_stream(session_id: str, user_message: str, api_key: str | None = N
                         result_text = "\n".join(filter(None, [out, file_notes])).strip()
                     elif block.name in TOOL_DISPATCH:
                         result_text = TOOL_DISPATCH[block.name](block.input, session_id)
-                        if block.name == "finalize_indicator" and "saved successfully" in result_text:
+                        if block.name == "finalize_indicator" and FINALIZE_SUCCESS_SENTINEL in result_text:
                             indicator_created = True
                             _save_chat_history(session_id, block.input.get("name", session_id))
                     else:

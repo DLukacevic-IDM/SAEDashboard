@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from workflow.constants import FINALIZE_SUCCESS_SENTINEL, MULTI_SHEET_SENTINEL, FILE_SAVED_PREFIX, METADATA_PREFIXES
 from workflow.csv_validator import load_upload, get_upload_summary, validate_output_csv, MASTER_DATA_FILE_REGEX
 from storage.metadata_store import (
     IndicatorMetadata, save_indicator, list_indicators as list_all_indicators
@@ -38,7 +39,7 @@ def validate_upload(session_id: str, sheet_name: str | None = None) -> str:
     summary = get_upload_summary(df)
     sheets_note = ""
     if info.get("sheets") and len(info["sheets"]) > 1:
-        sheets_note = f"\nMultiple sheets found: {info['sheets']}. Currently reading: {sheet_name or info['sheets'][0]}"
+        sheets_note = f"\n{MULTI_SHEET_SENTINEL}: {info['sheets']}. Currently reading: {sheet_name or info['sheets'][0]}"
 
     return f"File: {path.name} ({info['file_type']})\n{sheets_note}\n\n{summary}"
 
@@ -155,7 +156,7 @@ def finalize_indicator(
         regions = f", {n_regions} regions"
 
     summary = (
-        f"Indicator '{display_name}' saved successfully.\n"
+        f"Indicator '{display_name}' {FINALIZE_SUCCESS_SENTINEL}.\n"
         f"File: {filename} ({row_count} rows{year_range}{regions})\n"
         f"Color theme: {color_theme}\n"
     )
@@ -188,8 +189,6 @@ def finalize_indicator(
     return summary
 
 
-METADATA_PREFIXES = ("META:", "FILE_SAVED:", "SCHEMA:", "SHAPE:", "COLUMNS:", "DTYPE:", "ERROR:", "INFO:")
-
 
 def _sanitize_python_output(out: str) -> str:
     lines = out.splitlines()
@@ -217,7 +216,7 @@ try:
         __f = __plt.figure(__n)
         __p = f'{tmpdir}/autoplot_{{int(__t.time()*1000)}}_{{__n}}.png'
         __f.savefig(__p, dpi=150, bbox_inches='tight')
-        print(f'FILE_SAVED:{{__p}}')
+        print(f'{FILE_SAVED_PREFIX}{{__p}}')
         __plt.close(__f)
 except Exception:
     pass
@@ -236,9 +235,9 @@ except Exception:
     except subprocess.TimeoutExpired:
         return "Error: code timed out", []
 
-    files = re.findall(r"FILE_SAVED:(.+)", out)
+    files = re.findall(FILE_SAVED_PREFIX + r"(.+)", out)
     clean = _sanitize_python_output(out)
-    clean = re.sub(r"FILE_SAVED:.+\n?", "", clean).strip()
+    clean = re.sub(FILE_SAVED_PREFIX + r".+\n?", "", clean).strip()
     return clean, [f"{session_id}/{Path(f.strip()).name}" for f in files]
 
 

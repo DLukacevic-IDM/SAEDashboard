@@ -1,0 +1,7 @@
+FINALIZE_SUCCESS_SENTINEL = "saved successfully"
+MULTI_SHEET_SENTINEL = "Multiple sheets found"
+FILE_SAVED_PREFIX = "FILE_SAVED:"
+METADATA_PREFIXES = (
+    "META:", FILE_SAVED_PREFIX, "SCHEMA:", "SHAPE:",
+    "COLUMNS:", "DTYPE:", "ERROR:", "INFO:",
+)
