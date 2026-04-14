@@ -100,6 +100,23 @@ def list_existing_indicators() -> str:
     return "\n".join(lines)
 
 
+_STANDARD_COLUMNS = {"state", "year", "pred", "pred_upper", "pred_lower", "month"}
+
+
+def _align_reference_columns(df: pd.DataFrame, indicator_name: str) -> pd.DataFrame:
+    renames = {}
+    for col in df.columns:
+        if col in _STANDARD_COLUMNS or col == indicator_name or col == f"se.{indicator_name}":
+            continue
+        if col.startswith("se."):
+            renames[col] = f"se.{indicator_name}"
+        elif col not in _STANDARD_COLUMNS:
+            renames[col] = indicator_name
+    if renames:
+        df = df.rename(columns=renames)
+    return df
+
+
 def finalize_indicator(
     session_id: str,
     name: str,
@@ -114,7 +131,7 @@ def finalize_indicator(
     if session_id not in uploads_cache:
         return "ERROR: No data loaded. Call validate_upload and transform_csv first."
 
-    df = uploads_cache[session_id]
+    df = _align_reference_columns(uploads_cache[session_id], name)
     INDICATORS_DIR.mkdir(parents=True, exist_ok=True)
 
     filename = f"{country}__{name}__{subgroup}__{version}.csv"
@@ -250,6 +267,7 @@ def batch_finalize_indicator(
             warnings.append(f"  - {sg_name}: skipped (no rows)")
             continue
 
+        subset = _align_reference_columns(subset, name)
         filename = f"{country}__{name}__{sg_name}__{version}.csv"
         output_path = INDICATORS_DIR / filename
         subset.to_csv(output_path, index=False)
