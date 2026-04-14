@@ -22,7 +22,6 @@ import AssistantIcon from '@mui/icons-material/Assistant';
 import TuneIcon from '@mui/icons-material/Tune';
 import LLMClient from '../LLMClient';
 import IndicatorManager from '../IndicatorManager';
-import {setUserIndicators} from '../../redux/actions/filters';
 
 const styles = (theme) => ({
   root: {
@@ -169,10 +168,7 @@ const Layout = (props) => {
   };
 
   const refreshDashboardIndicators = () => {
-    fetch('/mind/indicators-data')
-        .then((r) => r.json())
-        .then((data) => dispatch(setUserIndicators(data.indicators || [])))
-        .catch(() => {});
+    window.location.reload();
   };
 
   const messages = translations[selectedLocale]; // get the translations for the locale

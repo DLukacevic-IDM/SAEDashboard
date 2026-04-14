@@ -276,7 +276,6 @@ const IndicatorManager = (props) => {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({hidden: !currentHidden}),
     });
-    fetchIndicators();
     if (onIndicatorAdded) onIndicatorAdded();
   };
 
